@@ -1,0 +1,10 @@
+.git
+.github
+**/__pycache__
+**/*.pyc
+.rag_index
+.venv
+apps/frontend/node_modules
+apps/frontend/dist
+docs/screenshots
+.env

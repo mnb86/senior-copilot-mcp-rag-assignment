@@ -1,0 +1,65 @@
+[project]
+name = "senior-copilot-mcp-rag-assignment"
+version = "1.0.0"
+description = "Alarm Investigation and Procedure Guidance Copilot - MCP server + MCP client + document RAG"
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+
+[tool.pytest.ini_options]
+pythonpath = [".", "apps/backend", "apps/alarm-api-simulator", "mcp-servers/alarm-management"]
+testpaths = ["tests", "rag/tests"]
+addopts = "-ra"
+markers = [
+  "integration: tests that start in-process servers or use real transports",
+  "e2e: end-to-end tests combining GUI/backend request, MCP server, Alarm API and RAG",
+]
+filterwarnings = [
+  "ignore::DeprecationWarning",
+  "ignore:.*ARC4.*",
+]
+
+[tool.coverage.run]
+source = ["apps/backend/copilot", "apps/alarm-api-simulator/alarm_simulator", "mcp-servers/alarm-management/alarm_mcp",
+          "connectors", "rag"]
+omit = ["*/tests/*", "*/__main__.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["apps/frontend", ".rag_index"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "BLE", "SIM", "RUF"]
+ignore = [
+  "S101",   # asserts are fine in tests / invariants
+  "S104",   # binding 0.0.0.0 is intended inside containers
+  "S311",   # random is used for jitter / synthetic data, not crypto
+  "RUF001", "RUF002", "RUF003",
+  "B008",
+  "SIM108",
+  "RUF012",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"conftest.py" = ["S105", "S106", "BLE001"]
+"scripts/**" = ["S105", "S106", "E501"]
+"tests/**" = ["S105", "S106", "BLE001", "B017"]
+"rag/tests/**" = ["S105", "S106"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = false
+check_untyped_defs = true
+mypy_path = ["$MYPY_CONFIG_FILE_DIR", "$MYPY_CONFIG_FILE_DIR/apps/backend",
+             "$MYPY_CONFIG_FILE_DIR/apps/alarm-api-simulator", "$MYPY_CONFIG_FILE_DIR/mcp-servers/alarm-management"]
+explicit_package_bases = true
+plugins = ["pydantic.mypy"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["copilot", "alarm_mcp", "alarm_simulator", "connectors", "rag", "conftest"]

@@ -1,0 +1,8 @@
+-r requirements.txt
+pytest==9.0.3
+pytest-cov>=6.0
+ruff==0.15.11
+mypy==1.20.2
+types-PyYAML
+pip-audit>=2.7
+reportlab>=4.0   # only for scripts/build_sample_pdf.py

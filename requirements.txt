@@ -1,0 +1,11 @@
+# Runtime dependencies (all Python services share one image). Versions pinned to the tested set.
+mcp==1.27.0
+starlette==1.0.0
+uvicorn==0.46.0
+httpx==0.28.1
+pydantic==2.13.3
+pydantic-settings==2.14.0
+jsonschema==4.26.0
+numpy==2.4.4
+PyYAML==6.0.3
+pypdf>=5.1,<7
