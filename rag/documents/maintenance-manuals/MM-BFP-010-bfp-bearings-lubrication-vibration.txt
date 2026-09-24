@@ -1,0 +1,62 @@
+DOC_ID: MM-BFP-010
+TITLE: Boiler Feed Pump Maintenance Manual - Bearings, Lubrication and Vibration
+DOC_TYPE: maintenance_manual
+REVISION: 3.1
+EFFECTIVE_DATE: 2025-06-30
+OWNER: NorthPlant Reliability Engineering
+SITE: NorthPlant
+ASSET_TYPES: pump, lube_oil_system
+ASSET_IDS: AST-BFP-101, AST-BFP-102, AST-LOS-101
+ALARM_NAMES: High Bearing Temperature, High Vibration, Low Lube Oil Pressure, Lube Oil Filter DP High, Seal Leak Detected
+
+1 Introduction
+
+This manual covers condition monitoring and maintenance of the bearings, forced lubrication system and
+mechanical seals of boiler feed pumps BFP-101 and BFP-102 (Flowserve HDX 150-8) and their lube oil
+console LOS-101.
+
+2 Lubrication System
+
+2.1 Normal operating values
+Lube oil header pressure: 1.8 to 2.5 bar(g). Low pressure alarm at 1.2 bar(g).
+Lube oil cooler outlet temperature: 40 to 50 degC.
+Filter differential pressure: below 1.0 bar with a clean element.
+
+2.2 Low lube oil pressure
+A low lube oil pressure condition starves the journal and thrust bearings and results in a bearing
+temperature rise within 5 to 15 minutes. Check in order: auxiliary oil pump auto-start, filter
+differential pressure, pressure control valve setting, and oil level in the reservoir. Change over to
+the standby filter if the differential pressure exceeds 1.0 bar.
+
+2.3 Chattering filter differential pressure alarm
+The filter DP alarm frequently chatters around its setpoint during filter loading. This is a known
+nuisance alarm; a 10 second on-delay is recommended in the alarm rationalization review. Do not disable
+the alarm.
+
+3 Bearings
+
+3.1 High bearing temperature
+Bearing temperature alarm is set at 85 degC and trip at 95 degC. On a high bearing temperature alarm:
+verify lube oil pressure and cooler outlet temperature, check oil for water contamination, and take an
+oil sample for particle count and water content. Increasing lube oil cooler water flow is acceptable as a
+temporary measure only when lube oil pressure is normal. Continued operation above 90 degC is not
+permitted; transfer load to the standby pump.
+
+3.2 Bearing replacement
+Replace bearings when the oil analysis shows babbitt particles or when the temperature exceeds the trip
+setting on two occasions within 30 days.
+
+4 Vibration Monitoring
+
+4.1 Limits
+Overall velocity alarm 7.1 mm/s, trip 11.0 mm/s, per ISO 10816-7 zone limits for this machine class.
+
+4.2 Diagnosis
+Take a vibration spectrum when the alarm is raised. 1x running speed indicates imbalance; 2x indicates
+misalignment; broadband high-frequency noise with low suction pressure indicates cavitation. Cavitation
+must be corrected at the process side (suction conditions) and not by mechanical maintenance.
+
+5 Mechanical Seals
+
+A seal leak alarm requires a field check within one hour. Minor weeping is acceptable until the next
+planned outage; a continuous leak requires changeover to the standby pump and seal replacement.
