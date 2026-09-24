@@ -1,0 +1,206 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 965" width="1480" height="965" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="aMcp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/></marker>
+    <marker id="aRag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker>
+    <marker id="aGen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+    <style>
+      .box{fill:#fff;stroke:#cbd5e1;stroke-width:1.5}
+      .zone{fill:#f8fafc;stroke:#94a3b8;stroke-width:1.2;stroke-dasharray:6 5}
+      .auth{fill:none;stroke:#b91c1c;stroke-width:2;stroke-dasharray:8 6}
+      .t{font-size:15px;font-weight:700;fill:#0f172a}
+      .s{font-size:12px;fill:#334155}
+      .m{font-size:11px;fill:#64748b}
+      .z{font-size:12px;font-weight:700;fill:#64748b;letter-spacing:.06em}
+      .mcp{stroke:#c2410c;stroke-width:2.4;fill:none}
+      .rag{stroke:#1d4ed8;stroke-width:2.4;fill:none}
+      .gen{stroke:#475569;stroke-width:1.6;fill:none}
+      .num{font-size:12px;font-weight:700;fill:#fff}
+      .lbl{font-size:11.5px;font-weight:600}
+    </style>
+  </defs>
+  <rect width="1480" height="965" fill="#ffffff"/>
+  <text x="30" y="38" font-size="22" font-weight="800" fill="#0f172a">Alarm Investigation &amp; Procedure Guidance Copilot - architecture</text>
+  <text x="30" y="60" class="s">One request flows through the MCP path (orange) and the RAG path (blue) inside the same plan; red dashed lines are authentication boundaries.</text>
+
+  <!-- zones -->
+  <rect x="20" y="80" width="300" height="840" rx="14" class="zone"/>
+  <text x="36" y="102" class="z">PRESENTATION</text>
+  <rect x="340" y="80" width="520" height="840" rx="14" class="zone"/>
+  <text x="356" y="102" class="z">COPILOT BACKEND  (apps/backend/copilot)</text>
+  <rect x="880" y="80" width="580" height="500" rx="14" class="zone"/>
+  <text x="896" y="102" class="z">TOOL LAYER  (mcp-servers/alarm-management + connectors)</text>
+  <rect x="880" y="600" width="580" height="320" rx="14" class="zone"/>
+  <text x="896" y="622" class="z">KNOWLEDGE LAYER  (rag/)</text>
+
+  <!-- GUI -->
+  <rect x="40" y="120" width="260" height="250" rx="12" class="box"/>
+  <text x="56" y="146" class="t">GUI - React + Vite</text>
+  <text x="56" y="168" class="s">Chat with context (conversation id)</text>
+  <text x="56" y="186" class="s">Alarm summary panel, trend, priority</text>
+  <text x="56" y="204" class="s">Likely causes + recommendations</text>
+  <text x="56" y="222" class="s">  (consistent / conflict / not covered)</text>
+  <text x="56" y="240" class="s">Sources: citations, quarantined chunks</text>
+  <text x="56" y="258" class="s">MCP trace: waves, args, JSON-RPC</text>
+  <text x="56" y="276" class="s">  request/response, API calls, retries</text>
+  <text x="56" y="294" class="s">Tools: live MCP tool discovery</text>
+  <text x="56" y="318" class="m">nginx serves the SPA and proxies /api</text>
+  <text x="56" y="336" class="m">loading / error / empty states, responsive</text>
+  <text x="56" y="354" class="m">XSS-safe markdown (no innerHTML)</text>
+
+  <rect x="40" y="400" width="260" height="120" rx="12" class="box"/>
+  <text x="56" y="426" class="t">Operator / engineer</text>
+  <text x="56" y="448" class="s">"Investigate recurring high-severity</text>
+  <text x="56" y="466" class="s">alarms for Boiler Feed Pump 101 ..."</text>
+  <text x="56" y="496" class="m">browser -> http://localhost:3000</text>
+  <path d="M170 400 L170 372" class="gen" marker-end="url(#aGen)"/>
+
+  <rect x="40" y="560" width="260" height="170" rx="12" class="box"/>
+  <text x="56" y="586" class="t">Observability</text>
+  <text x="56" y="608" class="s">Structured JSON logs in every service</text>
+  <text x="56" y="626" class="s">request_id, conversation_id, trace_id</text>
+  <text x="56" y="644" class="s">tool, duration, outcome, API status,</text>
+  <text x="56" y="662" class="s">retry count, retrieval query, doc ids,</text>
+  <text x="56" y="680" class="s">scores, LLM latency</text>
+  <text x="56" y="706" class="m">trace_id propagated GUI -> MCP _meta -> API</text>
+
+  <rect x="40" y="750" width="260" height="150" rx="12" class="box"/>
+  <text x="56" y="776" class="t">Configuration &amp; secrets</text>
+  <text x="56" y="798" class="s">.env / environment only (.env.example)</text>
+  <text x="56" y="816" class="s">SecretStr: API token, MCP token,</text>
+  <text x="56" y="834" class="s">LLM key - never logged or returned</text>
+  <text x="56" y="860" class="m">docker compose: health checks and</text>
+  <text x="56" y="878" class="m">dependency ordering</text>
+
+  <!-- backend -->
+  <rect x="360" y="120" width="480" height="92" rx="12" class="box"/>
+  <text x="376" y="146" class="t">API  (Starlette)   POST /api/chat · GET /api/tools</text>
+  <text x="376" y="168" class="s">request validation (size, schema), CORS, error envelopes,</text>
+  <text x="376" y="186" class="s">GET /api/health · /api/conversations/{id} · /api/rag/search</text>
+  <text x="376" y="204" class="m">admin: POST /api/rag/reindex (COPILOT_ADMIN_TOKEN)</text>
+
+  <rect x="360" y="228" width="480" height="232" rx="12" class="box"/>
+  <text x="376" y="254" class="t">Orchestrator</text>
+  <text x="376" y="278" class="s"><tspan font-weight="700">Intent + entities</tspan>  rules (optionally refined by LLM, validated)</text>
+  <text x="376" y="298" class="s"><tspan font-weight="700">Planner</tspan>  data plan: MCP steps + RAG step, $var bindings,</text>
+  <text x="376" y="316" class="s">   reusable selectors (best_asset, primary_alarm, focus_asset ...)</text>
+  <text x="376" y="336" class="s"><tspan font-weight="700">Executor</tspan>  dependency waves, parallel steps, foreach,</text>
+  <text x="376" y="354" class="s">   passes MCP outputs into later MCP calls and RAG queries,</text>
+  <text x="376" y="372" class="s">   isolates partial failures (skip / degrade, never crash)</text>
+  <text x="376" y="392" class="s"><tspan font-weight="700">Reasoning</tspan>  causes from correlation + history, recommendation</text>
+  <text x="376" y="410" class="s">   vs procedure check (conflict detection), citations S1..Sn</text>
+  <text x="376" y="430" class="s"><tspan font-weight="700">Composer / LLM writer</tspan>  grounded answer, citation validation,</text>
+  <text x="376" y="448" class="s">   unsafe-advice output guard, confidence</text>
+
+  <rect x="360" y="476" width="230" height="120" rx="12" class="box"/>
+  <text x="376" y="502" class="t">Conversation store</text>
+  <text x="376" y="524" class="s">last asset / alarm / site,</text>
+  <text x="376" y="542" class="s">recommendations, history</text>
+  <text x="376" y="566" class="m">in-memory LRU</text>
+  <text x="376" y="582" class="m">(Redis-ready interface)</text>
+
+  <rect x="610" y="476" width="230" height="120" rx="12" class="box"/>
+  <text x="626" y="502" class="t">LLM provider (optional)</text>
+  <text x="626" y="524" class="s">offline (default, no key)</text>
+  <text x="626" y="542" class="s">anthropic | openai-compatible</text>
+  <text x="626" y="566" class="m">replaceable; failures fall</text>
+  <text x="626" y="582" class="m">back to deterministic path</text>
+
+  <rect x="360" y="616" width="480" height="140" rx="12" class="box" stroke="#c2410c"/>
+  <text x="376" y="642" class="t" fill="#c2410c">MCP client  (copilot/mcp_client.py)</text>
+  <text x="376" y="664" class="s">streamable HTTP session · tools/list discovery (cached)</text>
+  <text x="376" y="682" class="s">client-side JSON-Schema validation of arguments</text>
+  <text x="376" y="700" class="s">output-schema validation · error parsing (isError)</text>
+  <text x="376" y="718" class="s">policy: read-only tools only unless user confirms</text>
+  <text x="376" y="738" class="m">_meta: trace_id, conversation_id, client_id, step_id</text>
+
+  <rect x="360" y="776" width="480" height="124" rx="12" class="box" stroke="#1d4ed8"/>
+  <text x="376" y="802" class="t" fill="#1d4ed8">Retrieval service  (copilot/retrieval_service.py)</text>
+  <text x="376" y="824" class="s">multi-query fusion (primary + derived + verification queries)</text>
+  <text x="376" y="842" class="s">filters from MCP data: asset type, site, asset ids, alarm names</text>
+  <text x="376" y="860" class="s">low-confidence flag · quarantine of injected chunks</text>
+  <text x="376" y="880" class="m">loads the persisted index (auto-ingest if missing)</text>
+
+  <!-- MCP server -->
+  <rect x="900" y="120" width="540" height="230" rx="12" class="box" stroke="#c2410c"/>
+  <text x="916" y="146" class="t" fill="#c2410c">MCP server "alarm-management"  (FastMCP, :9000/mcp)</text>
+  <text x="916" y="168" class="s">13 read-only tools with typed input/output schemas:</text>
+  <text x="916" y="188" class="s">search_assets · get_asset_metadata · get_alarms · get_alarm_details</text>
+  <text x="916" y="206" class="s">summarize_alarms · get_alarm_trends · correlate_alarms</text>
+  <text x="916" y="224" class="s">score_alarm_priority · get_operator_recommendations</text>
+  <text x="916" y="242" class="s">analyze_alarm_flood · find_rationalization_candidates</text>
+  <text x="916" y="260" class="s">calculate_kpi (generate+execute) · list_kpi_definitions</text>
+  <text x="916" y="284" class="s">input validation · error mapping to stable codes · trace in every result</text>
+  <text x="916" y="302" class="s">bearer auth middleware · tool allow-list · /healthz · stdio mode</text>
+  <text x="916" y="326" class="m">independently runnable: python -m alarm_mcp</text>
+
+  <rect x="900" y="366" width="540" height="96" rx="12" class="box" stroke="#c2410c"/>
+  <text x="916" y="392" class="t" fill="#c2410c">Alarm API connector  (connectors/alarm_api)</text>
+  <text x="916" y="414" class="s">bearer token · trace headers · timeout · retries w/ backoff+jitter</text>
+  <text x="916" y="432" class="s">typed errors · pagination (has_next) · per-attempt audit records</text>
+  <text x="916" y="450" class="m">path-segment encoding, no secrets in records</text>
+
+  <rect x="900" y="478" width="540" height="90" rx="12" class="box" stroke="#c2410c" fill="#fff7ed"/>
+  <text x="916" y="504" class="t" fill="#c2410c">Alarm Management API simulator  (:8000)</text>
+  <text x="916" y="526" class="s">implements the Postman contract (15 endpoints, 10 chains)</text>
+  <text x="916" y="544" class="s">deterministic synthetic data · fault injection (503, timeouts)</text>
+  <text x="916" y="560" class="m">source system of record for assets and alarms</text>
+
+  <!-- RAG -->
+  <rect x="900" y="640" width="250" height="130" rx="12" class="box" stroke="#1d4ed8" fill="#eff6ff"/>
+  <text x="916" y="666" class="t" fill="#1d4ed8">Document store</text>
+  <text x="916" y="688" class="s">rag/documents: SOPs, manuals,</text>
+  <text x="916" y="706" class="s">troubleshooting, safety, philosophy,</text>
+  <text x="916" y="724" class="s">vendor bulletin (external)</text>
+  <text x="916" y="748" class="m">.md .txt .html .pdf + metadata</text>
+
+  <rect x="1180" y="640" width="260" height="130" rx="12" class="box" stroke="#1d4ed8"/>
+  <text x="1196" y="666" class="t" fill="#1d4ed8">Ingestion pipeline</text>
+  <text x="1196" y="688" class="s">extract -> section chunking (900/150)</text>
+  <text x="1196" y="706" class="s">metadata capture -> injection scan</text>
+  <text x="1196" y="724" class="s">and redaction -> BM25 + LSA vectors</text>
+  <text x="1196" y="748" class="m">idempotent (corpus hash) · rag-ingest job</text>
+
+  <rect x="1180" y="790" width="260" height="110" rx="12" class="box" stroke="#1d4ed8"/>
+  <text x="1196" y="816" class="t" fill="#1d4ed8">Retrieval index (volume)</text>
+  <text x="1196" y="838" class="s">chunks.jsonl · bm25.json · vectors.npy</text>
+  <text x="1196" y="856" class="s">LSA model · manifest (hash, docs)</text>
+  <text x="1196" y="880" class="m">hybrid: 0.5 BM25 + 0.5 dense + boosts</text>
+
+  <!-- auth boundaries -->
+  <line x1="870" y1="112" x2="870" y2="590" class="auth"/>
+  <text x="866" y="104" class="m" fill="#b91c1c" text-anchor="end">MCP bearer token</text>
+  <line x1="892" y1="470" x2="1452" y2="470" class="auth"/>
+  <text x="1448" y="488" class="m" fill="#b91c1c" text-anchor="end">Alarm API bearer token</text>
+  <line x1="330" y1="112" x2="330" y2="380" class="auth"/>
+  <text x="326" y="396" class="m" fill="#b91c1c" text-anchor="end">input validation</text>
+
+  <!-- flows -->
+  <path d="M300 170 L360 170" class="gen" marker-end="url(#aGen)"/>
+  <path d="M600 212 L600 228" class="gen" marker-end="url(#aGen)"/>
+  <path d="M725 460 L725 476" class="gen" marker-end="url(#aGen)"/>
+  <path d="M475 460 L475 476" class="gen" marker-end="url(#aGen)"/>
+
+  <path d="M600 460 L600 616" class="mcp" marker-end="url(#aMcp)"/>
+  <path d="M840 680 C 880 680, 870 250, 900 250" class="mcp" marker-end="url(#aMcp)"/>
+  <path d="M1170 350 L1170 366" class="mcp" marker-end="url(#aMcp)"/>
+  <path d="M1170 462 L1170 478" class="mcp" marker-end="url(#aMcp)"/>
+
+  <path d="M360 440 L348 440 L348 830 L360 830" class="rag" marker-end="url(#aRag)"/>
+  <path d="M1150 705 L1180 705" class="rag" marker-end="url(#aRag)"/>
+  <path d="M1310 770 L1310 790" class="rag" marker-end="url(#aRag)"/>
+  <path d="M1180 845 L840 845" class="rag" marker-end="url(#aRag)"/>
+
+  <!-- numbered steps -->
+  <g>
+    <circle cx="330" cy="152" r="11" fill="#475569"/><text x="330" y="156" class="num" text-anchor="middle">1</text>
+    <circle cx="352" cy="300" r="11" fill="#475569"/><text x="352" y="304" class="num" text-anchor="middle">2</text>
+    <circle cx="600" cy="540" r="11" fill="#c2410c"/><text x="600" y="544" class="num" text-anchor="middle">3</text>
+    <circle cx="884" cy="400" r="11" fill="#c2410c"/><text x="884" y="404" class="num" text-anchor="middle">4</text>
+    <circle cx="1190" cy="358" r="11" fill="#c2410c"/><text x="1190" y="362" class="num" text-anchor="middle">5</text>
+    <circle cx="348" cy="700" r="11" fill="#1d4ed8"/><text x="348" y="704" class="num" text-anchor="middle">6</text>
+    <circle cx="1010" cy="845" r="11" fill="#1d4ed8"/><text x="1010" y="849" class="num" text-anchor="middle">7</text>
+    <circle cx="352" cy="420" r="11" fill="#475569"/><text x="352" y="424" class="num" text-anchor="middle">8</text>
+  </g>
+
+  <text x="30" y="950" class="m">1 NL request · 2 intent + plan · 3 MCP discovery + chained tool calls · 4 MCP tools -> connector · 5 connector -> Alarm API (retries, trace headers) · 6 RAG step fed by MCP outputs · 7 hybrid retrieval from the index · 8 combined reasoning, citations, guard -> GUI</text>
+</svg>
