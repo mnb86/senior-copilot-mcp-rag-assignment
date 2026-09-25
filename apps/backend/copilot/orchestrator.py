@@ -30,6 +30,11 @@ UNSAFE_REQUEST_NOTICE = (
     "The investigation below is read-only evidence to help find and fix the underlying cause."
 )
 
+MCP_UNAVAILABLE_NOTICE = (
+    "**Alarm data unavailable.** The MCP server could not be reached, so assets and alarms were not looked up. "
+    "The guidance below comes from the procedure documents only; ask again once the service is back."
+)
+
 log = logging.getLogger("copilot.orchestrator")
 
 
@@ -201,7 +206,13 @@ class Copilot:
             elif rec.retries and rec.status == "ok":
                 warnings.append(f"`{rec.tool}` recovered after {rec.retries} retry(ies) (transient upstream error)")
         clarification = plan.needs_clarification
-        if not clarification and "asset_id" in result.binding_errors and intent.name != "site_priority":
+        # With the MCP server down, an unresolved asset is a symptom of the outage, not of a bad asset name.
+        if (
+            not clarification
+            and not unavailable
+            and "asset_id" in result.binding_errors
+            and intent.name != "site_priority"
+        ):
             clarification = (
                 f"I could not resolve the asset: {result.binding_errors['asset_id']}. Please check the "
                 "asset name or tag (e.g. 'Boiler Feed Pump 101', 'K-301')."
@@ -229,6 +240,8 @@ class Copilot:
             )
 
         markdown = compose(intent, panel, causes, recs, citations, low_conf, warnings, out, clarification)
+        if unavailable:
+            markdown = MCP_UNAVAILABLE_NOTICE + "\n\n" + markdown
         generator = "template"
         safety_flags: list[str] = []
         if self.llm is not None and not clarification:

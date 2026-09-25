@@ -123,6 +123,13 @@ async def test_mcp_server_unavailable_falls_back_to_documents(retrieval):
     assert r.errors and "MCP server unavailable" in r.errors[0]
     assert all(t.status != "ok" for t in r.tool_trace if t.kind == "mcp")
     assert steps(r)["retrieve_documents"].status == "ok" and r.citations
+    # the outage is named as the cause; the user is not told the asset name is wrong
+    assert r.answer.markdown.startswith("**Alarm data unavailable.**")
+    assert "could not resolve the asset" not in r.answer.markdown
+
+    r = await cp.handle(ChatRequest(message="Investigate recurring high-severity alarms for Boiler Feed Pump 101"))
+    assert r.answer.markdown.startswith("**Alarm data unavailable.**")
+    assert "could not resolve the asset" not in r.answer.markdown and "resolve_asset" not in r.answer.markdown
 
 
 async def test_unknown_asset_asks_for_clarification(sim_app, retrieval):
