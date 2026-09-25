@@ -16,7 +16,7 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
-from rag.models import ExtractedDocument, Section
+from rag.retrieval.models import ExtractedDocument, Section
 
 SUPPORTED_SUFFIXES = (".md", ".markdown", ".txt", ".html", ".htm", ".pdf")
 LIST_FIELDS = ("asset_types", "asset_ids", "alarm_names")
@@ -245,7 +245,7 @@ def extract(path: Path, root: Path | None = None) -> ExtractedDocument:
     meta = _normalise_meta(meta, path)
     if not sections:
         raise ExtractionError(f"{path.name}: no extractable text")
-    rel = str(path.relative_to(root)) if root else path.name
+    rel = path.relative_to(root).as_posix() if root else path.name
     return ExtractedDocument(
         doc_id=str(meta["doc_id"]),
         title=str(meta["title"]),

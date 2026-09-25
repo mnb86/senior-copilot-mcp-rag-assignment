@@ -15,13 +15,14 @@ from types import CodeType
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGES = [
     "apps/backend/copilot",
-    "apps/alarm-api-simulator/alarm_simulator",
+    "apps/backend/alarm_simulator",
+    "mcp-servers/optional-secondary-server/document_mcp",
     "mcp-servers/alarm-management/alarm_mcp",
     "connectors",
     "rag/ingestion",
     "rag/retrieval",
-    "rag/models.py",
-    "rag/security.py",
+    "rag/retrieval/models.py",
+    "rag/ingestion/security.py",
 ]
 SOURCES = sorted(
     {

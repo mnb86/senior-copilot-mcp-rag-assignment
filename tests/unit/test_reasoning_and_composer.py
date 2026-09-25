@@ -5,7 +5,7 @@ from __future__ import annotations
 from copilot.composer import compose
 from copilot.domain import Entities, Intent
 from copilot.reasoning import assess_recommendations, build_causes, build_citations
-from rag.models import Chunk, RetrievalFilters, RetrievalResult, RetrievedChunk
+from rag.retrieval.models import Chunk, RetrievalFilters, RetrievalResult, RetrievedChunk
 
 
 def chunk(

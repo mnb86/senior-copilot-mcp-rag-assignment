@@ -7,8 +7,8 @@ import threading
 from pathlib import Path
 
 from rag.ingestion import ingest
-from rag.models import RetrievalFilters, RetrievalResult, RetrievedChunk
 from rag.retrieval import HybridRetriever
+from rag.retrieval.models import RetrievalFilters, RetrievalResult, RetrievedChunk
 
 log = logging.getLogger("copilot.retrieval")
 

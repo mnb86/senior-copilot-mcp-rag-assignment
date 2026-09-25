@@ -2,7 +2,7 @@ __pycache__/
 *.py[cod]
 .venv/
 .env
-.rag_index/
+rag/retrieval/.index/
 htmlcov/
 coverage.xml
 .coverage
@@ -13,3 +13,4 @@ apps/frontend/node_modules/
 apps/frontend/dist/
 *.log
 .DS_Store
+*.tsbuildinfo

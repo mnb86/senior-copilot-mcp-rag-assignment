@@ -2,7 +2,7 @@
 .github
 **/__pycache__
 **/*.pyc
-.rag_index
+rag/retrieval/.index
 .venv
 apps/frontend/node_modules
 apps/frontend/dist

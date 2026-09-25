@@ -1,4 +1,4 @@
-"""Starlette application implementing the Alarm Management API contract (see postman/)."""
+"""Starlette application implementing the Alarm Management API contract (see test-data/postman/)."""
 
 from __future__ import annotations
 

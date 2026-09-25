@@ -10,7 +10,7 @@ from typing import Any
 
 import numpy as np
 
-from rag.models import Chunk
+from rag.retrieval.models import Chunk
 
 from .bm25 import BM25Index
 from .embeddings import Embedder, create_embedder, load_embedder

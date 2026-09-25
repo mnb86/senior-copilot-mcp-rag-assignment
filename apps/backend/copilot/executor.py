@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from rag.models import RetrievalFilters, RetrievalResult
+from rag.retrieval.models import RetrievalFilters, RetrievalResult
 
 from .domain import PlanStep, ToolCallRecord
 from .mcp_client import McpClientError, ToolSession

@@ -10,7 +10,7 @@ import re
 from collections import Counter
 from typing import Any
 
-from rag.models import RetrievalResult
+from rag.retrieval.models import RetrievalResult
 from rag.retrieval.text import tokenize
 
 from .domain import (

@@ -1,6 +1,7 @@
 -r requirements.txt
 pytest==9.0.3
 pytest-cov>=6.0
+httpx2>=2.13   # transport for starlette.testclient (Starlette >= 1.7 deprecates plain httpx there)
 ruff==0.15.11
 mypy==1.20.2
 types-PyYAML

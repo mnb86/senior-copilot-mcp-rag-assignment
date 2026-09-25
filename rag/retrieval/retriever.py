@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-from rag.models import Chunk, RetrievalFilters, RetrievalResult, RetrievedChunk
+from rag.retrieval.models import Chunk, RetrievalFilters, RetrievalResult, RetrievedChunk
 
 from .index import RetrievalIndex
 

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # RAG
     document_path: str = Field("rag/documents", alias="DOCUMENT_PATH")
-    rag_index_path: str = Field(".rag_index", alias="RAG_INDEX_PATH")
+    rag_index_path: str = Field("rag/retrieval/.index", alias="RAG_INDEX_PATH")
     embedding_provider: str = Field("lsa", alias="EMBEDDING_PROVIDER")
     rag_auto_ingest: bool = Field(True, alias="RAG_AUTO_INGEST")
     rag_top_k: int = Field(5, alias="RAG_TOP_K", ge=1, le=20)

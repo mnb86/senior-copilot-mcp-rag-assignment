@@ -14,7 +14,7 @@ from .pipeline import ingest
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Build the RAG retrieval index")
     ap.add_argument("--docs", default=os.getenv("DOCUMENT_PATH", "rag/documents"))
-    ap.add_argument("--index", default=os.getenv("RAG_INDEX_PATH", ".rag_index"))
+    ap.add_argument("--index", default=os.getenv("RAG_INDEX_PATH", "rag/retrieval/.index"))
     ap.add_argument("--embedder", default=os.getenv("EMBEDDING_PROVIDER", "lsa"))
     ap.add_argument("--force", action="store_true", help="rebuild even if the corpus is unchanged")
     args = ap.parse_args(argv)

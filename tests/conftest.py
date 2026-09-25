@@ -24,11 +24,11 @@ from alarm_mcp.config import ServerSettings
 from alarm_mcp.server import create_server
 from alarm_simulator.app import SimSettings, create_app
 from alarm_simulator.store import parse_time
-from connectors.alarm_api import AlarmApiClient, AlarmApiSettings
+from connectors import AlarmApiClient, AlarmApiSettings
 from copilot.mcp_client import ToolOutcome, ToolSpec, parse_tool_error
 from rag.ingestion import ingest
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "rag" / "documents"
 ANCHOR = "2026-07-01T00:00:00Z"
 TOKEN = "test-api-token"

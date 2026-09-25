@@ -16,7 +16,7 @@ from typing import Any, Protocol
 import httpx
 from pydantic import ValidationError
 
-from rag.security import find_unsafe_advice
+from rag.ingestion.security import find_unsafe_advice
 
 from .config import Settings
 from .domain import Citation, Entities, Intent

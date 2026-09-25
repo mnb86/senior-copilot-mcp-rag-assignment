@@ -8,7 +8,7 @@ import httpx
 import pytest
 
 from conftest import TOKEN, _no_sleep, api_client_for
-from connectors.alarm_api import (
+from connectors import (
     AlarmApiClient,
     AlarmApiSettings,
     AuthenticationError,

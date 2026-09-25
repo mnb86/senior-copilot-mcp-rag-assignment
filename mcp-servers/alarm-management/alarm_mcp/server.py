@@ -15,13 +15,18 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal, TypeVar
 
-from mcp.server.fastmcp import Context, FastMCP
+try:
+    from mcp.server.fastmcp import Context, FastMCP
+except ModuleNotFoundError as exc:  # mcp 2.x renamed FastMCP
+    raise ImportError(
+        'This project targets the MCP Python SDK v1 (FastMCP API). Install it with: pip install "mcp>=1.27,<2"'
+    ) from exc
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
-from connectors.alarm_api import AlarmApiClient, AlarmApiError, AlarmApiSettings, ApiResult, TraceContext
+from connectors import AlarmApiClient, AlarmApiError, AlarmApiSettings, ApiResult, TraceContext
 
 from . import models as m
 from .config import ServerSettings

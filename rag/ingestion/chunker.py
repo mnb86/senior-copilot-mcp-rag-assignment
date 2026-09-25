@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import re
 
-from rag.models import Chunk, ExtractedDocument
-from rag.security import redact_injection
+from rag.ingestion.security import redact_injection
+from rag.retrieval.models import Chunk, ExtractedDocument
 
 DEFAULT_MAX_CHARS = 900
 DEFAULT_OVERLAP_CHARS = 150

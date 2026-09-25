@@ -13,8 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from rag.models import Chunk
 from rag.retrieval.index import RetrievalIndex
+from rag.retrieval.models import Chunk
 
 from .chunker import DEFAULT_MAX_CHARS, DEFAULT_OVERLAP_CHARS, chunk_document
 from .extractors import SUPPORTED_SUFFIXES, ExtractionError, extract
@@ -48,7 +48,7 @@ def discover(documents_dir: Path) -> list[Path]:
 def corpus_hash(paths: list[Path], root: Path, params: dict[str, Any]) -> str:
     h = hashlib.sha256(json.dumps(params, sort_keys=True).encode())
     for p in paths:
-        h.update(str(p.relative_to(root)).encode())
+        h.update(p.relative_to(root).as_posix().encode())
         h.update(hashlib.sha256(p.read_bytes()).digest())
         sidecar = p.with_name(p.name + ".meta.json")
         if sidecar.exists():

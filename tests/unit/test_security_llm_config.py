@@ -17,7 +17,7 @@ from copilot.llm import (
     refine_intent,
     validate_citations,
 )
-from rag.security import detect_injection, find_unsafe_advice, redact_injection
+from rag.ingestion.security import detect_injection, find_unsafe_advice, redact_injection
 
 
 def test_injection_patterns_detected_and_redacted():
@@ -60,8 +60,11 @@ def test_citation_validation_strips_unknown_markers():
 
 
 def test_secrets_are_not_exposed_by_settings_repr():
-    s = Settings(LLM_API_KEY="sk-live-123", MCP_SERVER_TOKEN="mcp-abc")
-    assert "sk-live-123" not in repr(s) and "mcp-abc" not in s.model_dump_json()
+    s = Settings(LLM_API_KEY="fake-llm-key-for-redaction-test", MCP_SERVER_TOKEN="fake-mcp-token-for-redaction-test")
+    assert (
+        "fake-llm-key-for-redaction-test" not in repr(s)
+        and "fake-mcp-token-for-redaction-test" not in s.model_dump_json()
+    )
 
 
 def test_provider_factory_defaults_to_offline():

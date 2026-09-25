@@ -4,7 +4,7 @@ Responsibilities (kept out of the MCP layer so the connector is reusable):
   * bearer authentication (token never logged or returned),
   * trace metadata propagation (``trace_id``, ``x-client-id``, ``x-metadata-tag``, ``x-request-id``),
   * per-request timeout, bounded retries with exponential backoff + jitter for retryable failures,
-  * mapping HTTP failures to typed :mod:`connectors.alarm_api.errors`,
+  * mapping HTTP failures to typed :mod:`connectors.alarm_api_errors`,
   * pagination helpers,
   * an auditable record of every HTTP attempt (for the MCP execution trace).
 """
@@ -23,7 +23,7 @@ from typing import Any
 
 import httpx
 
-from .errors import (
+from .alarm_api_errors import (
     AlarmApiError,
     ConnectionFailedError,
     UnexpectedResponseError,
@@ -31,7 +31,7 @@ from .errors import (
     error_for_status,
 )
 
-log = logging.getLogger("connectors.alarm_api")
+log = logging.getLogger("connectors.alarm_api_client")
 
 RETRYABLE_STATUS = frozenset({429, 502, 503, 504})
 MAX_RECORDED_BODY = 4000
