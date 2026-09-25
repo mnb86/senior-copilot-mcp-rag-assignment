@@ -7,7 +7,7 @@ industrial alarms. It calls the Alarm Management API **only through a purpose-bu
 operating procedures with **document RAG**, combines both inside **one plan**, and answers with **citations**
 and a full **MCP execution trace** in a React GUI.
 
-> **Demo video (up to 10 min):** _add link after upload_ - see [`docs/demo-script.md`](docs/demo-script.md) for the recording script.
+
 > Screenshots: [`docs/screenshots/`](docs/screenshots).
 
 ![Acceptance scenario](docs/screenshots/02-acceptance-investigation.png)
