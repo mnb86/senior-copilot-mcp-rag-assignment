@@ -1,12 +1,16 @@
 """Generate docs/mcp-tool-catalog.md from the live MCP server definitions + real example calls.
 
-Run: PYTHONPATH=.:apps/backend:apps/alarm-api-simulator:mcp-servers/alarm-management python scripts/generate_tool_catalog.py
+Covers both servers: ``alarm-management`` (mcp-servers/alarm-management) and the secondary
+``document-knowledge`` server (mcp-servers/optional-secondary-server).
+
+Run: make catalog
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -16,9 +20,13 @@ from alarm_mcp.config import ServerSettings
 from alarm_mcp.server import ID_PATTERN, create_server
 from alarm_simulator.app import SimSettings, create_app
 from alarm_simulator.store import parse_time
-from connectors.alarm_api import AlarmApiClient, AlarmApiSettings
+from connectors import AlarmApiClient, AlarmApiSettings
+from document_mcp.config import DocServerSettings
+from document_mcp.server import create_server as create_doc_server
+from rag.ingestion import ingest
 
-OUT = Path(__file__).resolve().parents[1] / "docs" / "mcp-tool-catalog.md"
+ROOT = Path(__file__).resolve().parents[1]
+OUT = ROOT / "docs" / "mcp-tool-catalog.md"
 W = {"start_time": "2026-04-02T00:00:00Z", "end_time": "2026-07-01T00:00:00Z"}
 
 API_OP = {
@@ -73,6 +81,29 @@ EXAMPLES: dict[str, dict[str, Any]] = {
     "list_kpi_definitions": {},
 }
 
+DOC_OP = {
+    "search_documents": "Hybrid BM25 + dense search over the RAG index (`rag.retrieval.HybridRetriever`)",
+    "get_document_section": "Chunk lookup in the RAG index by `chunk_id`",
+    "list_documents": "RAG index manifest (`manifest.json`)",
+}
+DOC_ERRORS = {
+    "search_documents": "Blank query -> `INVALID_ARGUMENT`; no match -> `results: []`, `low_confidence: true` "
+    "(not an error). Quarantined passages are listed in `quarantined`, never returned as text.",
+    "get_document_section": "`NOT_FOUND` for unknown ids; `QUARANTINED` for sections flagged by the "
+    "prompt-injection scanner.",
+    "list_documents": "`INDEX_UNAVAILABLE` if no index exists and auto-ingest is off.",
+}
+DOC_EXAMPLES: dict[str, dict[str, Any]] = {
+    "search_documents": {
+        "query": "restart boiler feed pump after low suction pressure trip",
+        "doc_types": ["operating_procedure"],
+        "asset_ids": ["AST-BFP-101"],
+        "top_k": 3,
+    },
+    "get_document_section": {"chunk_id": "<from search_documents>"},
+    "list_documents": {"doc_type": "operating_procedure"},
+}
+
 
 def trim(v: Any, depth: int = 0) -> Any:
     if isinstance(v, list):
@@ -80,6 +111,11 @@ def trim(v: Any, depth: int = 0) -> Any:
     if isinstance(v, dict):
         return {k: trim(x, depth + 1) for k, x in v.items()}
     return v
+
+
+def type_name(v: dict[str, Any], fallback: str) -> str:
+    """JSON-schema type, or the referenced model name for ``$ref`` properties."""
+    return str(v.get("type") or v.get("$ref", f"#/{fallback}").rsplit("/", 1)[-1])
 
 
 def schema_table(schema: dict[str, Any]) -> str:
@@ -92,12 +128,12 @@ def schema_table(schema: dict[str, Any]) -> str:
         for v in variants:
             if v.get("type") == "null":
                 continue
-            t = v.get("type", "object")
+            t = type_name(v, "object")
             if "enum" in v:
                 t = " \\| ".join(f"`{e}`" for e in v["enum"])
             if t == "array":
                 items = v.get("items", {})
-                inner = " \\| ".join(f"`{e}`" for e in items["enum"]) if "enum" in items else items.get("type", "any")
+                inner = " \\| ".join(f"`{e}`" for e in items["enum"]) if "enum" in items else type_name(items, "any")
                 t = f"array of {inner}"
             cons = [
                 f"{k}={v[k]}"
@@ -115,7 +151,51 @@ def schema_table(schema: dict[str, Any]) -> str:
     return "\n".join(rows)
 
 
-async def main() -> None:
+def tool_section(
+    t: Any, args: dict[str, Any], res: Any, operation: str, auth: str, errors: str, timeout: str
+) -> list[str]:
+    return [
+        "",
+        f"### {t.name}",
+        "",
+        f"**{t.title}.** {t.description}",
+        "",
+        f"- **Underlying operation:** {operation}",
+        f"- **Authentication:** {auth}",
+        f"- **Errors:** common mapping (above). {errors}",
+        f"- **Timeout:** {timeout}",
+        "",
+        "**Input schema**",
+        "",
+        schema_table(t.inputSchema),
+        "",
+        "**Output schema**",
+        "",
+        schema_table(t.outputSchema or {}),
+        "",
+        "<details><summary>Full input / output JSON Schema</summary>",
+        "",
+        "```json",
+        json.dumps({"inputSchema": t.inputSchema, "outputSchema": t.outputSchema}, indent=2),
+        "```",
+        "",
+        "</details>",
+        "",
+        "**Example invocation** (`tools/call`)",
+        "",
+        "```json",
+        json.dumps({"name": t.name, "arguments": args, "_meta": {"trace_id": "trace-demo-001"}}, indent=2),
+        "```",
+        "",
+        "**Example response** (`structuredContent`, lists truncated)",
+        "",
+        "```json",
+        json.dumps(trim(res), indent=2)[:3500],
+        "```",
+    ]
+
+
+async def alarm_server_lines() -> list[str]:
     sim = create_app(SimSettings(token="doc", anchor=parse_time("2026-07-01T00:00:00Z")))
     client = AlarmApiClient(AlarmApiSettings(base_url="http://sim", token="doc"), transport=httpx.ASGITransport(sim))
     mcp = create_server(ServerSettings(), client)
@@ -123,15 +203,12 @@ async def main() -> None:
     _, alarms = await mcp.call_tool("get_alarms", {"asset_id": "AST-BFP-101", "status": "active"})
     alarm_id = alarms["alarms"][0]["alarm_id"]
     lines = [
-        "# MCP Tool Catalog - `alarm-management` server",
-        "",
-        "_Generated by `scripts/generate_tool_catalog.py` from the running server definitions and real example calls "
-        "against the simulator (anchor 2026-07-01). Do not edit by hand._",
+        "## Server 1 - `alarm-management` (mcp-servers/alarm-management)",
         "",
         "**Transport:** streamable HTTP at `http://<host>:9000/mcp` (stateless, JSON responses) or stdio "
         "(`python -m alarm_mcp --transport stdio`).",
         "",
-        "## Behaviour common to all tools",
+        "### Behaviour common to all tools",
         "",
         "| Aspect | Behaviour |",
         "| --- | --- |",
@@ -159,7 +236,7 @@ async def main() -> None:
         "`UPSTREAM_TIMEOUT`, `CONNECTION_FAILED`, `UNEXPECTED_RESPONSE`. Schema violations return the Pydantic "
         "validation message. |",
         "",
-        "## Tools",
+        "### Tools",
         "",
         "| Tool | Purpose | API operation |",
         "| --- | --- | --- |",
@@ -169,46 +246,87 @@ async def main() -> None:
     for t in tools:
         args = {k: (alarm_id if v == "<from get_alarms>" else v) for k, v in EXAMPLES[t.name].items()}
         _, res = await mcp.call_tool(t.name, args)
-        out_props = ", ".join(f"`{k}`" for k in (t.outputSchema or {}).get("properties", {}))
-        lines += [
+        timeout = "per-attempt API timeout + retries as above" + (
+            " (two API calls, each with its own timeout/retry budget)." if t.name == "calculate_kpi" else "."
+        )
+        auth = "MCP bearer token (client) -> API bearer token injected by the server."
+        lines += tool_section(t, args, res, API_OP[t.name], auth, SPECIFIC_ERRORS[t.name], timeout)
+    return lines
+
+
+async def document_server_lines() -> list[str]:
+    with tempfile.TemporaryDirectory() as index_dir:
+        ingest(ROOT / "rag" / "documents", Path(index_dir), force=True)
+        mcp = create_doc_server(DocServerSettings(RAG_INDEX_PATH=index_dir, DOCS_MCP_AUTO_INGEST=False))
+        tools = await mcp.list_tools()
+        _, hits = await mcp.call_tool("search_documents", DOC_EXAMPLES["search_documents"])
+        chunk_id = hits["results"][0]["chunk_id"]
+        lines = [
             "",
-            f"### {t.name}",
+            "## Server 2 - `document-knowledge` (mcp-servers/optional-secondary-server)",
             "",
-            f"**{t.title}.** {t.description}",
+            "Optional secondary source: exposes the RAG corpus (operating procedures, maintenance manuals, "
+            "troubleshooting guides, safety instructions, alarm philosophy) as read-only MCP tools, so any MCP "
+            "client can retrieve cited procedure guidance. It reads the same index the ingestion pipeline builds.",
             "",
-            f"- **Underlying operation:** {API_OP[t.name]}",
-            "- **Authentication:** MCP bearer token (client) -> API bearer token injected by the server.",
-            f"- **Errors:** common mapping (above). {SPECIFIC_ERRORS[t.name]}",
-            "- **Timeout:** per-attempt API timeout + retries as above"
-            + (" (two API calls, each with its own timeout/retry budget)." if t.name == "calculate_kpi" else "."),
-            f"- **Output fields:** {out_props}",
+            "**Transport:** streamable HTTP at `http://<host>:9100/mcp` (stateless, JSON responses) or stdio "
+            "(`python -m document_mcp --transport stdio`).",
             "",
-            "**Input schema**",
+            "### Behaviour common to all tools",
             "",
-            schema_table(t.inputSchema),
+            "| Aspect | Behaviour |",
+            "| --- | --- |",
+            "| Authentication (client -> MCP) | `Authorization: Bearer $DOCS_MCP_SERVER_TOKEN` required on `/mcp` when "
+            "configured (401 otherwise). `/healthz` is public. No upstream credentials (local index). |",
+            "| Authorization | All tools are read-only (`readOnlyHint=true`, `destructiveHint=false`). |",
+            "| Input validation | Typed signatures: `doc_types` enum, `top_k` 1-10, length limits, `chunk_id` pattern. |",
+            "| Output | `structuredContent` validated against `outputSchema`; every result carries `trace` "
+            "(`trace_id` from `_meta`, `tool`, `duration_ms`, `index_version` = corpus hash). |",
+            "| Prompt-injection | Passage `text` is untrusted data. Chunks flagged at ingestion are never returned as "
+            "text: search lists them under `quarantined`, `get_document_section` refuses with `QUARANTINED`. |",
+            "| Timeouts | In-process index lookups (milliseconds, no network); the copilot's per-call "
+            "`MCP_TIMEOUT_SECONDS` applies. The first call may build the index when `DOCS_MCP_AUTO_INGEST=true`. |",
+            '| Error format | Same envelope as server 1: `{"error": {"code", "message", ...}}`. Codes: '
+            "`INVALID_ARGUMENT`, `NOT_FOUND`, `QUARANTINED`, `INDEX_UNAVAILABLE`. |",
             "",
-            "<details><summary>Full input / output JSON Schema</summary>",
+            "### Tools",
             "",
-            "```json",
-            json.dumps({"inputSchema": t.inputSchema, "outputSchema": t.outputSchema}, indent=2),
-            "```",
-            "",
-            "</details>",
-            "",
-            "**Example invocation** (`tools/call`)",
-            "",
-            "```json",
-            json.dumps({"name": t.name, "arguments": args, "_meta": {"trace_id": "trace-demo-001"}}, indent=2),
-            "```",
-            "",
-            "**Example response** (`structuredContent`, lists truncated)",
-            "",
-            "```json",
-            json.dumps(trim(res), indent=2)[:3500],
-            "```",
+            "| Tool | Purpose | Operation |",
+            "| --- | --- | --- |",
         ]
-    OUT.write_text("\n".join(lines) + "\n")
-    print(f"wrote {OUT} ({len(tools)} tools)")
+        for t in tools:
+            lines.append(f"| [`{t.name}`](#{t.name.replace('_', '-')}) | {t.title} | {DOC_OP[t.name]} |")
+        for t in tools:
+            args = {k: (chunk_id if v == "<from search_documents>" else v) for k, v in DOC_EXAMPLES[t.name].items()}
+            _, res = await mcp.call_tool(t.name, args)
+            lines += tool_section(
+                t,
+                args,
+                res,
+                DOC_OP[t.name],
+                "MCP bearer token (`DOCS_MCP_SERVER_TOKEN`); no upstream credentials.",
+                DOC_ERRORS[t.name],
+                "local index lookup (no upstream calls); client-side per-call timeout applies.",
+            )
+        return lines
+
+
+async def main() -> None:
+    header = [
+        "# MCP Tool Catalog",
+        "",
+        "_Generated by `scripts/generate_tool_catalog.py` from the running server definitions and real example calls "
+        "(simulator anchor 2026-07-01). Do not edit by hand._",
+        "",
+        "| Server | Folder | Tools | Default endpoint |",
+        "| --- | --- | --- | --- |",
+        "| `alarm-management` | `mcp-servers/alarm-management` | 13 | `http://localhost:9000/mcp` |",
+        "| `document-knowledge` | `mcp-servers/optional-secondary-server` | 3 | `http://localhost:9100/mcp` |",
+        "",
+    ]
+    lines = header + await alarm_server_lines() + await document_server_lines()
+    OUT.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"wrote {OUT}")
 
 
 if __name__ == "__main__":
