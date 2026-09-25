@@ -2,12 +2,26 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from copilot.reasoning import build_citations
 from copilot.retrieval_service import RetrievalService
-from rag.models import RetrievalFilters
+from rag.ingestion import ingest
 from rag.retrieval import HybridRetriever
+from rag.retrieval.models import RetrievalFilters
+
+DOCS = Path(__file__).resolve().parents[1] / "documents"
+
+
+@pytest.fixture(scope="module")
+def rag_index_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    out = tmp_path_factory.mktemp("rag_index")
+    report = ingest(DOCS, out, force=True)
+    assert report.documents >= 9 and not report.errors
+    return out
 
 
 @pytest.fixture(scope="module")
@@ -15,27 +29,17 @@ def retriever(rag_index_dir):
     return HybridRetriever.from_directory(rag_index_dir)
 
 
-@pytest.mark.parametrize(
-    "query,filters,expected",
-    [
-        (
-            "restart pump after low suction pressure trip",
-            RetrievalFilters(asset_types=["pump"]),
-            "SOP-BFP-001#4-pump-trip-response",
-        ),
-        (
-            "related assets to inspect after motor trip",
-            RetrievalFilters(asset_types=["motor"]),
-            "TG-MTR-005#2-related-assets-to-inspect-after-a-moto",
-        ),
-        ("why do compressor discharge pressure alarms recur", RetrievalFilters(site="EastRefinery"), "TG-CMP-003"),
-        ("shelving safety alarms", None, "AP-ALM-001#5-shelving-and-suppression"),
-        ("cavitation", None, "MM-BFP-010#4-2-diagnosis"),
-    ],
-)
-def test_relevant_chunk_ranks_first(retriever, query, filters, expected):
-    res = retriever.search(query, filters, top_k=3)
-    assert res.results[0].chunk.chunk_id.startswith(expected)
+EVAL_SET = json.loads((Path(__file__).resolve().parents[2] / "test-data" / "retrieval_eval.json").read_text("utf-8"))
+
+
+@pytest.mark.parametrize("case", EVAL_SET["cases"], ids=lambda c: c["query"][:40])
+def test_retrieval_eval_set(retriever, case):
+    """Relevance regression suite: every case in test-data/retrieval_eval.json must rank its expected chunk first."""
+    res = retriever.search(case["query"], RetrievalFilters(**case["filters"]) if case["filters"] else None, top_k=3)
+    if case.get("expect_low_confidence"):
+        assert res.low_confidence
+        return
+    assert res.results[0].chunk.chunk_id.startswith(case["expected_top"])
     assert not res.low_confidence
 
 
