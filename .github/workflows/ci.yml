@@ -140,10 +140,18 @@ jobs:
           for i in $(seq 1 100); do curl -fs http://localhost:3000/api/health && break; sleep 3; done
       - name: Service health (every long-running service healthy, ingestion job exited 0)
         run: |
-          docker compose ps -a
+          # A container reports "starting" until its first health check runs, so wait for each one (up to 120 s).
           for s in alarm-api alarm-mcp docs-mcp copilot-backend frontend; do
-            test "$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q $s)")" = healthy || { echo "$s not healthy"; exit 1; }
+            for i in $(seq 1 40); do
+              status="$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q $s)")"
+              [ "$status" = healthy ] && break
+              [ "$status" = unhealthy ] && break
+              sleep 3
+            done
+            echo "$s: $status"
+            [ "$status" = healthy ] || { docker compose ps -a; echo "$s not healthy"; exit 1; }
           done
+          docker compose ps -a
           test "$(docker inspect -f '{{.State.ExitCode}}' "$(docker compose ps -a -q rag-ingest)")" = 0
       - name: Smoke test - every API endpoint, every MCP tool, copilot API
         env:
