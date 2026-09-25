@@ -20,7 +20,9 @@ export function ToolsPanel() {
       .catch((e: Error) => setErr(e.message))
       .finally(() => setLoading(false));
   };
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   return (
     <div className="panel-body">

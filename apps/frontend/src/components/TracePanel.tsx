@@ -118,7 +118,7 @@ export function TracePanel({ r }: { r: InvestigationResponse }) {
         <p className="muted small">{r.intent.rationale}</p>
       </section>
       {groupByWave(r.tool_trace).map(([wave, rows]) => (
-        <section key={wave} className="wave">
+        <section key={wave} id={`wave-${wave}`} className="wave">
           <div className="wave-h">
             {wave === 0 ? "Discovery" : `Wave ${wave}`}
             {rows.length > 1 && wave > 0 && <span className="muted small"> · {rows.length} calls in parallel</span>}

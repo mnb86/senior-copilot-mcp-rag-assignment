@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmtMs, fmtPct, groupByWave, parseBlocks, parseInline } from "./utils";
+import { fmtMs, fmtPct, groupByWave, parseBlocks, parseInline, splitAnswer } from "./utils";
 
 describe("parseInline", () => {
   it("tokenises bold, code, italics and citations", () => {
@@ -33,5 +33,16 @@ describe("formatters", () => {
   it("groups trace records by wave", () => {
     const g = groupByWave([{ wave: 2 }, { wave: 1 }, { wave: 2 }]);
     expect(g.map(([w, r]) => [w, r.length])).toEqual([[1, 1], [2, 2]]);
+  });
+});
+
+describe("splitAnswer", () => {
+  it("keeps the summary lines and folds the detailed sections", () => {
+    const [lead, rest] = splitAnswer("**Pump 101**: 32 alarms\nTrend up\n**Likely contributing factors**\n- A");
+    expect(lead).toBe("**Pump 101**: 32 alarms\nTrend up");
+    expect(rest).toBe("**Likely contributing factors**\n- A");
+  });
+  it("returns answers that open with a heading whole", () => {
+    expect(splitAnswer("**What the documents say**\n- quote")).toEqual(["**What the documents say**\n- quote", ""]);
   });
 });

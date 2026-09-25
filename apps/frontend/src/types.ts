@@ -171,10 +171,11 @@ export interface Health {
   mcp_server_url: string;
 }
 
-export interface ChatTurn {
+/** One investigation run in the session history. */
+export interface InvestigationRun {
   id: string;
-  role: "user" | "assistant";
-  text: string;
+  query: string;
+  startedAt: string;
   response?: InvestigationResponse;
   error?: string;
   pending?: boolean;

@@ -7,6 +7,7 @@ import json
 import logging
 import os
 from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError
@@ -15,9 +16,10 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.routing import Route
+from starlette.routing import BaseRoute, Mount, Route
+from starlette.staticfiles import StaticFiles
 
-from rag.models import RetrievalFilters
+from rag.retrieval.models import RetrievalFilters
 
 from .config import Settings, get_settings
 from .domain import ChatRequest
@@ -28,6 +30,17 @@ from .retrieval_service import RetrievalService
 
 log = logging.getLogger("copilot.api")
 MAX_BODY = 16_384
+_HERE = Path(__file__).resolve().parent
+
+
+def gui_directory() -> Path | None:
+    """GUI served at "/": COPILOT_GUI_DIR, else a fresh `npm run build` (apps/frontend/dist), else the pre-built
+    bundle shipped in copilot/static - so the app works at http://localhost:8080 without Node.js."""
+    candidates = [os.getenv("COPILOT_GUI_DIR", ""), str(_HERE.parents[1] / "frontend" / "dist"), str(_HERE / "static")]
+    for c in candidates:
+        if c and (Path(c) / "index.html").is_file():
+            return Path(c)
+    return None
 
 
 def _err(status: int, code: str, message: str, details: Any = None) -> JSONResponse:
@@ -130,7 +143,7 @@ def create_app(settings: Settings | None = None, copilot: Copilot | None = None)
             return _err(503, "RETRIEVAL_UNAVAILABLE", "Retrieval index not loaded")
         return JSONResponse(c.retrieval.reindex(force=True))
 
-    routes = [
+    routes: list[BaseRoute] = [
         Route("/api/health", health, methods=["GET"]),
         Route("/api/tools", tools, methods=["GET"]),
         Route("/api/chat", chat, methods=["POST"]),
@@ -138,6 +151,9 @@ def create_app(settings: Settings | None = None, copilot: Copilot | None = None)
         Route("/api/rag/search", rag_search, methods=["GET"]),
         Route("/api/rag/reindex", reindex, methods=["POST"]),
     ]
+    gui = gui_directory()
+    if gui is not None:
+        routes.append(Mount("/", app=StaticFiles(directory=gui, html=True), name="gui"))
     origins = [o.strip() for o in s.cors_origins.split(",") if o.strip()]
     return Starlette(
         routes=routes,
