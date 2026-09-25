@@ -211,6 +211,18 @@ def classify(message: str, entities: Entities | None = None, has_context: bool =
         low,
     ) and (has_scope or has_context):
         vote("investigate", 0.8, "alarm investigation request with an asset/site scope")
+    if (
+        not has_scope
+        and not has_context
+        and re.search(
+            r"\b(what (must|should|do|does|is required)|how (do|to|should|must)|before (re)?start\w*|"
+            r"requirements?|checklist|guidance|say about|rules? for|allowed to)\b",
+            low,
+        )
+    ):
+        vote("general_question", 0.75, "guidance question without an asset/site scope; answering from documents")
+    if not has_scope and not has_context and re.search(r"\b(investigate|investigation|root cause)\b", low):
+        vote("investigate", 0.65, "asks for an investigation but names no asset, site or unit; will ask which one")
     if not scores:
         if has_scope or e.alarm_keywords:
             vote("investigate", 0.6, "mentions an asset or alarm; defaulting to investigation")

@@ -21,7 +21,15 @@ CASES = [
     ),
     ("What is the alarm flood percentage in Unit 2 last month?", "alarm_kpi"),
     ("What does the alarm philosophy say about shelving?", "general_question"),
+    ("What must be checked before restarting rotating equipment after a trip?", "general_question"),
+    ("Why is Forced Draft Fan 301 alarming so often?", "investigate"),
+    ("Investigate the alarms", "investigate"),  # no scope: the planner then asks which asset
 ]
+
+
+def test_guidance_follow_up_keeps_case_context():
+    # the same how-to wording inside an open case stays an investigation of that asset
+    assert classify("What should I do about this alarm?", has_context=True).name != "general_question"
 
 
 @pytest.mark.parametrize("message,intent", CASES)

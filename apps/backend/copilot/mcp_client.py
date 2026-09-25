@@ -17,8 +17,14 @@ from typing import Any, Protocol
 import httpx
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError as SchemaError
-from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
+
+try:
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
+except ImportError as exc:  # mcp 2.x changed the client API
+    raise ImportError(
+        'This project targets the MCP Python SDK v1 (FastMCP API). Install it with: pip install "mcp>=1.27,<2"'
+    ) from exc
 from pydantic import BaseModel
 
 from .config import Settings

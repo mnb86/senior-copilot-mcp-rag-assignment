@@ -12,6 +12,8 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
+from rag.ingestion.security import UNSAFE_ADVICE
+
 from .composer import compose
 from .config import Settings
 from .domain import Answer, ChatRequest, InvestigationResponse, RetrievalInfo, TimeWindow, ToolCallRecord
@@ -21,6 +23,12 @@ from .llm import LLMError, LLMProvider, guard_answer, refine_intent, validate_ci
 from .mcp_client import McpClientError, ToolSession, ToolSpec
 from .planner import ConversationContext, Planner
 from .reasoning import assess_recommendations, build_causes, build_citations, build_summary
+
+UNSAFE_REQUEST_NOTICE = (
+    "**Not supported: bypassing or disabling a trip, interlock, alarm or safety system.** Protections may only be "
+    "overridden under your site's management-of-change and permit process with the responsible engineer. "
+    "The investigation below is read-only evidence to help find and fix the underlying cause."
+)
 
 log = logging.getLogger("copilot.orchestrator")
 
@@ -248,6 +256,10 @@ class Copilot:
             except (LLMError, Exception) as exc:  # noqa: BLE001 - any provider failure degrades gracefully
                 warnings.append(f"LLM unavailable ({type(exc).__name__}); used deterministic template answer")
         safety_flags.extend(guard_answer(markdown) if generator == "template" else [])
+        if UNSAFE_ADVICE.search(req.message):
+            # The request itself asks to defeat a protection: answer with the read-only evidence, but refuse that part.
+            safety_flags.append("unsafe_request: bypass/disable of a protection was requested")
+            markdown = UNSAFE_REQUEST_NOTICE + "\n\n" + markdown
 
         core_ok = sum(1 for r in result.records if r.kind == "mcp" and r.status == "ok")
         core_fail = sum(1 for r in result.records if r.kind == "mcp" and r.status != "ok")
@@ -344,6 +356,7 @@ class Copilot:
                     "generator": generator,
                     "tools": [
                         {
+                            "mcp_server": r.server,
                             "tool": r.tool,
                             "status": r.status,
                             "duration_ms": r.duration_ms,
@@ -358,6 +371,12 @@ class Copilot:
                         "doc_ids": [c.chunk_id for c in citations],
                         "scores": [c.score for c in citations],
                     },
+                    # null when no LLM is configured (deterministic template answer)
+                    "llm_latency_ms": (
+                        round(timings.get("llm_intent_ms", 0) + timings.get("llm_answer_ms", 0), 1)
+                        if self.llm is not None
+                        else None
+                    ),
                     "timings": timings,
                 }
             )

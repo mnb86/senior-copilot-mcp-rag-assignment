@@ -69,8 +69,9 @@ def compose(
         w = panel.window.label if panel.window else ""
         head = f"**{a['asset_name']}** ({a['asset_id']}, {a['site']} {a['unit']}, criticality {a['criticality']})"
         if "alarms" in out or "summary" in out:
-            sev = ", ".join(f"{v} {k}" for k, v in panel.by_severity.items()) or "no"
-            lines.append(f"{head}: {panel.total_alarms} alarm(s) {w} ({sev}) from `get_alarms` / `summarize_alarms`.")
+            sev = ", ".join(f"{v} {k}" for k, v in panel.by_severity.items())
+            sev = f" ({sev})" if sev else ""
+            lines.append(f"{head}: {panel.total_alarms} alarm(s) {w}{sev} from `get_alarms` / `summarize_alarms`.")
         else:
             lines.append(f"{head}.")
         if panel.primary_alarm and "alarms" not in out:

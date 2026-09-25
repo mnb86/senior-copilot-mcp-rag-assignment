@@ -83,3 +83,9 @@ def test_conversation_history_and_input_validation(backend):
     assert backend.post("/api/chat", json={"message": "x", "conversation_id": "../etc"}).status_code == 422
     assert backend.post("/api/chat", content=b"x" * 20000).status_code == 413
     assert backend.post("/api/rag/reindex").status_code == 403
+
+
+def test_gui_is_served_by_the_backend(backend):
+    page = backend.get("/")
+    assert page.status_code == 200 and "Alarm Investigation Copilot" in page.text
+    assert backend.get("/app.js").status_code == 200 or "/assets/" in page.text
