@@ -1,0 +1,135 @@
+# docker compose up --build   ->  GUI on http://localhost:3000
+#
+# Start-up order (each arrow waits for the previous service to be healthy / completed):
+#   alarm-api -> alarm-mcp -> copilot-backend -> frontend
+#   rag-ingest (one-shot)  -> copilot-backend
+#   rag-ingest (one-shot)  -> docs-mcp
+# No database or ticketing mock: the copilot is read-only and keeps no persistent state (docs/known-limitations.md).
+name: alarm-copilot
+
+x-python: &python
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: alarm-copilot-python:latest
+  env_file:
+    - path: .env
+      required: false
+  restart: unless-stopped
+
+services:
+  # ---- Alarm Management API (simulator implementing the Postman contract)
+  alarm-api:
+    <<: *python
+    command: ["python", "-m", "alarm_simulator"]
+    environment:
+      ALARM_API_TOKEN: ${ALARM_API_TOKEN:-demo-token}
+      SIM_PORT: "8000"
+      SIM_FAULTS: ${SIM_FAULTS:-POST /alarms/correlation=503x1}
+      SIM_FAULT_CLIENTS: ${SIM_FAULT_CLIENTS:-alarm-mcp-server,alarm-copilot}
+      SIM_ANCHOR_TIME: ${SIM_ANCHOR_TIME:-}
+    ports: ["8000:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---- MCP server (alarm-management): the only path from the copilot to the Alarm API
+  alarm-mcp:
+    <<: *python
+    command: ["python", "-m", "alarm_mcp"]
+    environment:
+      ALARM_API_BASE_URL: http://alarm-api:8000
+      ALARM_API_TOKEN: ${ALARM_API_TOKEN:-demo-token}
+      ALARM_API_TIMEOUT_SECONDS: ${ALARM_API_TIMEOUT_SECONDS:-10}
+      ALARM_API_MAX_RETRIES: ${ALARM_API_MAX_RETRIES:-2}
+      MCP_PORT: "9000"
+      MCP_SERVER_TOKEN: ${MCP_SERVER_TOKEN:-change-me-mcp-token}
+      MCP_ENABLED_TOOLS: ${MCP_ENABLED_TOOLS:-}
+    ports: ["9000:9000"]
+    depends_on:
+      alarm-api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:9000/healthz')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---- Retrieval service, part 1: one-shot ingestion job that builds the retrieval index on a shared volume
+  rag-ingest:
+    <<: *python
+    restart: "no"
+    command: ["python", "-m", "rag.ingestion", "--docs", "/app/rag/documents", "--index", "/data/rag_index"]
+    environment:
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-lsa}
+    volumes:
+      - rag-index:/data/rag_index
+
+  # ---- Retrieval service, part 2: document-knowledge MCP server over the same index (read-only mount)
+  docs-mcp:
+    <<: *python
+    command: ["python", "-m", "document_mcp"]
+    environment:
+      DOCUMENT_PATH: /app/rag/documents
+      RAG_INDEX_PATH: /data/rag_index
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-lsa}
+      DOCS_MCP_AUTO_INGEST: "false"
+      DOCS_MCP_PORT: "9100"
+      DOCS_MCP_SERVER_TOKEN: ${DOCS_MCP_SERVER_TOKEN:-change-me-docs-mcp-token}
+    volumes:
+      - rag-index:/data/rag_index:ro
+    ports: ["9100:9100"]
+    depends_on:
+      rag-ingest: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:9100/healthz')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---- Copilot backend (orchestration, MCP client, in-process retrieval over the index)
+  copilot-backend:
+    <<: *python
+    command: ["python", "-m", "copilot"]
+    environment:
+      MCP_SERVER_URL: http://alarm-mcp:9000/mcp
+      MCP_SERVER_TOKEN: ${MCP_SERVER_TOKEN:-change-me-mcp-token}
+      DOCUMENT_PATH: /app/rag/documents
+      RAG_INDEX_PATH: /data/rag_index
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-lsa}
+      LLM_PROVIDER: ${LLM_PROVIDER:-offline}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      COPILOT_PORT: "8080"
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      COPILOT_ADMIN_TOKEN: ${COPILOT_ADMIN_TOKEN:-}
+    volumes:
+      - rag-index:/data/rag_index
+    ports: ["8080:8080"]
+    depends_on:
+      alarm-mcp: { condition: service_healthy }
+      rag-ingest: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/api/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # ---- GUI (nginx serves the React build and proxies /api to the backend)
+  frontend:
+    build:
+      context: apps/frontend
+    ports: ["3000:80"]
+    depends_on:
+      copilot-backend: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  rag-index:

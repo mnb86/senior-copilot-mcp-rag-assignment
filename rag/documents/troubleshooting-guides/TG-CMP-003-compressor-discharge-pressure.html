@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Centrifugal Compressor Troubleshooting Guide - Discharge Pressure and Temperature</title>
+<meta name="doc_id" content="TG-CMP-003">
+<meta name="doc_type" content="troubleshooting_guide">
+<meta name="revision" content="1.4">
+<meta name="effective_date" content="2026-02-10">
+<meta name="owner" content="EastRefinery Rotating Equipment">
+<meta name="site" content="EastRefinery">
+<meta name="asset_types" content="compressor, heat_exchanger, valve">
+<meta name="asset_ids" content="AST-K-301, AST-K-302, AST-E-301, AST-FV-301">
+<meta name="alarm_names" content="High Discharge Pressure, High Discharge Temperature, High Outlet Temperature, Surge Detected, Valve Position Deviation">
+<style>body{font-family:sans-serif}</style>
+<script>console.log("scripts are ignored by the extractor");</script>
+</head>
+<body>
+<h1>Centrifugal Compressor Troubleshooting Guide - Discharge Pressure and Temperature</h1>
+
+<h2>1. Scope</h2>
+<p>This guide supports troubleshooting of recurring high discharge pressure and high discharge
+temperature alarms on EastRefinery centrifugal compressors, including Recycle Gas Compressor K-301
+(HCU-2) and Wet Gas Compressor K-302 (CDU-1).</p>
+
+<h2>2. Why Discharge Pressure Alarms Recur</h2>
+<p>Repeated high discharge pressure alarms are rarely caused by the compressor itself. The most common
+contributing factors are:</p>
+<ul>
+<li><b>Degraded discharge cooler performance.</b> A high outlet temperature on the discharge cooler
+(E-301 for K-301) raises downstream pressure drop and pushes the operating point towards the alarm.
+Fouled air-cooler fin banks, a failed cooler fan or closed louvres are typical causes, and the effect is
+strongest on hot afternoons.</li>
+<li><b>Anti-surge valve deviation.</b> An anti-surge valve (FV-301) that does not follow controller output
+changes the recycle flow and therefore the discharge pressure.</li>
+<li><b>Downstream restriction.</b> A partially closed downstream block valve or high reactor loop pressure.</li>
+<li><b>Gas composition change.</b> Higher molecular weight increases the developed head.</li>
+</ul>
+
+<h2>3. Diagnostic Steps</h2>
+<ol>
+<li>Trend discharge pressure together with discharge cooler outlet temperature for the last 24 hours. A
+cooler outlet temperature rise that precedes the pressure alarm by 5 to 15 minutes confirms the cooler
+as the contributing factor.</li>
+<li>Compare anti-surge valve position feedback with controller output. A deviation greater than 5 %
+requires an instrument technician to check the positioner.</li>
+<li>Check cooler fan motors are running and fin banks are clean. Schedule fin-bank washing if the approach
+temperature is more than 8 degC above design.</li>
+<li>Confirm downstream block valves are fully open.</li>
+</ol>
+
+<h2>4. Immediate Operator Actions</h2>
+<p>Reduce compressor load within the approved operating envelope to keep discharge pressure below the
+trip setting of 175 bar(g). Keep the anti-surge controller in automatic. Do not open the anti-surge
+valve manually to relieve pressure unless instructed by the shift supervisor, because manual recycle can
+overheat the compressor suction.</p>
+
+<h2>5. Surge</h2>
+<p>A Surge Detected alarm requires immediate confirmation that the anti-surge controller is in automatic
+and the valve is responding. Repeated surge events require a compressor performance review before the
+machine is returned to normal load.</p>
+</body>
+</html>

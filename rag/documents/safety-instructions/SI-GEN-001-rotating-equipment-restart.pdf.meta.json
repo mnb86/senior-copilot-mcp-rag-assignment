@@ -1,0 +1,22 @@
+{
+  "doc_id": "SI-GEN-001",
+  "title": "Safety Instruction - Rotating Equipment Isolation and Restart Authorisation",
+  "doc_type": "safety_instruction",
+  "revision": "6.1",
+  "effective_date": "2025-10-01",
+  "owner": "Corporate HSE",
+  "site": "ALL",
+  "asset_types": [
+    "pump",
+    "compressor",
+    "motor",
+    "fan"
+  ],
+  "asset_ids": [],
+  "alarm_names": [
+    "Pump Trip",
+    "Motor Trip",
+    "High Vibration",
+    "Surge Detected"
+  ]
+}

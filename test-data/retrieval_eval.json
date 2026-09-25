@@ -1,0 +1,11 @@
+{
+  "description": "Retrieval evaluation set: query, optional filters, expected top chunk prefix (used by rag/tests/test_rag_retrieval.py).",
+  "cases": [
+    {"query": "restart pump after low suction pressure trip", "filters": {"asset_types": ["pump"]}, "expected_top": "SOP-BFP-001#4-pump-trip-response"},
+    {"query": "related assets to inspect after motor trip", "filters": {"asset_types": ["motor"]}, "expected_top": "TG-MTR-005#2"},
+    {"query": "why do compressor discharge pressure alarms recur", "filters": {"site": "EastRefinery"}, "expected_top": "TG-CMP-003"},
+    {"query": "shelving safety alarms", "filters": {}, "expected_top": "AP-ALM-001#5-shelving-and-suppression"},
+    {"query": "cavitation", "filters": {}, "expected_top": "MM-BFP-010#4-2-diagnosis"},
+    {"query": "chocolate cake recipe with sprinkles", "filters": {}, "expected_top": null, "expect_low_confidence": true}
+  ]
+}

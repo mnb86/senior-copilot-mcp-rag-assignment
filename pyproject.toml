@@ -7,7 +7,7 @@ readme = "README.md"
 license = { text = "MIT" }
 
 [tool.pytest.ini_options]
-pythonpath = [".", "apps/backend", "apps/alarm-api-simulator", "mcp-servers/alarm-management"]
+pythonpath = [".", "apps/backend", "mcp-servers/alarm-management", "mcp-servers/optional-secondary-server", "tests"]
 testpaths = ["tests", "rag/tests"]
 addopts = "-ra"
 markers = [
@@ -20,8 +20,8 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
-source = ["apps/backend/copilot", "apps/alarm-api-simulator/alarm_simulator", "mcp-servers/alarm-management/alarm_mcp",
-          "connectors", "rag"]
+source = ["apps/backend/copilot", "apps/backend/alarm_simulator", "mcp-servers/alarm-management/alarm_mcp",
+          "mcp-servers/optional-secondary-server/document_mcp", "connectors", "rag"]
 omit = ["*/tests/*", "*/__main__.py"]
 
 [tool.coverage.report]
@@ -31,7 +31,7 @@ skip_covered = false
 [tool.ruff]
 line-length = 120
 target-version = "py311"
-extend-exclude = ["apps/frontend", ".rag_index"]
+extend-exclude = ["apps/frontend", "rag/retrieval/.index"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "S", "BLE", "SIM", "RUF"]
@@ -46,7 +46,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"conftest.py" = ["S105", "S106", "BLE001"]
+"tests/conftest.py" = ["S105", "S106", "BLE001"]
 "scripts/**" = ["S105", "S106", "E501"]
 "tests/**" = ["S105", "S106", "BLE001", "B017"]
 "rag/tests/**" = ["S105", "S106"]
@@ -57,9 +57,10 @@ ignore_missing_imports = true
 warn_unused_ignores = false
 check_untyped_defs = true
 mypy_path = ["$MYPY_CONFIG_FILE_DIR", "$MYPY_CONFIG_FILE_DIR/apps/backend",
-             "$MYPY_CONFIG_FILE_DIR/apps/alarm-api-simulator", "$MYPY_CONFIG_FILE_DIR/mcp-servers/alarm-management"]
+             "$MYPY_CONFIG_FILE_DIR/mcp-servers/alarm-management",
+             "$MYPY_CONFIG_FILE_DIR/mcp-servers/optional-secondary-server"]
 explicit_package_bases = true
 plugins = ["pydantic.mypy"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["copilot", "alarm_mcp", "alarm_simulator", "connectors", "rag", "conftest"]
+known-first-party = ["copilot", "alarm_mcp", "document_mcp", "alarm_simulator", "connectors", "rag", "conftest"]
