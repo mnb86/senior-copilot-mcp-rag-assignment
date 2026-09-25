@@ -30,19 +30,19 @@
   <rect x="880" y="80" width="580" height="500" rx="14" class="zone"/>
   <text x="896" y="102" class="z">TOOL LAYER  (mcp-servers/alarm-management + connectors)</text>
   <rect x="880" y="600" width="580" height="320" rx="14" class="zone"/>
-  <text x="896" y="622" class="z">KNOWLEDGE LAYER  (rag/)</text>
+  <text x="896" y="622" class="z">KNOWLEDGE LAYER  (rag/ + mcp-servers/optional-secondary-server)</text>
 
   <!-- GUI -->
   <rect x="40" y="120" width="260" height="250" rx="12" class="box"/>
   <text x="56" y="146" class="t">GUI - React + Vite</text>
-  <text x="56" y="168" class="s">Chat with context (conversation id)</text>
-  <text x="56" y="186" class="s">Alarm summary panel, trend, priority</text>
+  <text x="56" y="168" class="s">Chat panel: conversation + follow-ups</text>
+  <text x="56" y="186" class="s">Report: alarm summary, trend, priority</text>
   <text x="56" y="204" class="s">Likely causes + recommendations</text>
   <text x="56" y="222" class="s">  (consistent / conflict / not covered)</text>
-  <text x="56" y="240" class="s">Sources: citations, quarantined chunks</text>
-  <text x="56" y="258" class="s">MCP trace: waves, args, JSON-RPC</text>
+  <text x="56" y="240" class="s">Evidence: citations, quarantined chunks</text>
+  <text x="56" y="258" class="s">Execution trace: waves, args, JSON-RPC</text>
   <text x="56" y="276" class="s">  request/response, API calls, retries</text>
-  <text x="56" y="294" class="s">Tools: live MCP tool discovery</text>
+  <text x="56" y="294" class="s">Tool catalog: live MCP tool discovery</text>
   <text x="56" y="318" class="m">nginx serves the SPA and proxies /api</text>
   <text x="56" y="336" class="m">loading / error / empty states, responsive</text>
   <text x="56" y="354" class="m">XSS-safe markdown (no innerHTML)</text>
@@ -134,7 +134,7 @@
   <text x="916" y="326" class="m">independently runnable: python -m alarm_mcp</text>
 
   <rect x="900" y="366" width="540" height="96" rx="12" class="box" stroke="#c2410c"/>
-  <text x="916" y="392" class="t" fill="#c2410c">Alarm API connector  (connectors/alarm_api)</text>
+  <text x="916" y="392" class="t" fill="#c2410c">Alarm API connector  (connectors/)</text>
   <text x="916" y="414" class="s">bearer token · trace headers · timeout · retries w/ backoff+jitter</text>
   <text x="916" y="432" class="s">typed errors · pagination (has_next) · per-attempt audit records</text>
   <text x="916" y="450" class="m">path-segment encoding, no secrets in records</text>
@@ -159,6 +159,13 @@
   <text x="1196" y="706" class="s">metadata capture -> injection scan</text>
   <text x="1196" y="724" class="s">and redaction -> BM25 + LSA vectors</text>
   <text x="1196" y="748" class="m">idempotent (corpus hash) · rag-ingest job</text>
+
+  <rect x="900" y="782" width="250" height="92" rx="12" class="box" stroke="#1d4ed8" stroke-dasharray="5 3"/>
+  <text x="914" y="802" font-size="12.5" font-weight="700" fill="#1d4ed8">MCP server "document-knowledge"</text>
+  <text x="914" y="818" class="m">optional secondary source · :9100/mcp</text>
+  <text x="914" y="834" class="s">search_documents · get_document_section</text>
+  <text x="914" y="850" class="s">list_documents · citations · quarantine</text>
+  <text x="914" y="866" class="m">external MCP clients · DOCS_MCP bearer token</text>
 
   <rect x="1180" y="790" width="260" height="110" rx="12" class="box" stroke="#1d4ed8"/>
   <text x="1196" y="816" class="t" fill="#1d4ed8">Retrieval index (volume)</text>
@@ -188,7 +195,8 @@
   <path d="M360 440 L348 440 L348 830 L360 830" class="rag" marker-end="url(#aRag)"/>
   <path d="M1150 705 L1180 705" class="rag" marker-end="url(#aRag)"/>
   <path d="M1310 770 L1310 790" class="rag" marker-end="url(#aRag)"/>
-  <path d="M1180 845 L840 845" class="rag" marker-end="url(#aRag)"/>
+  <path d="M1180 888 L840 888" class="rag" marker-end="url(#aRag)"/>
+  <path d="M1180 815 L1150 815" class="rag" marker-end="url(#aRag)"/>
 
   <!-- numbered steps -->
   <g>
@@ -198,7 +206,7 @@
     <circle cx="884" cy="400" r="11" fill="#c2410c"/><text x="884" y="404" class="num" text-anchor="middle">4</text>
     <circle cx="1190" cy="358" r="11" fill="#c2410c"/><text x="1190" y="362" class="num" text-anchor="middle">5</text>
     <circle cx="348" cy="700" r="11" fill="#1d4ed8"/><text x="348" y="704" class="num" text-anchor="middle">6</text>
-    <circle cx="1010" cy="845" r="11" fill="#1d4ed8"/><text x="1010" y="849" class="num" text-anchor="middle">7</text>
+    <circle cx="1010" cy="888" r="11" fill="#1d4ed8"/><text x="1010" y="892" class="num" text-anchor="middle">7</text>
     <circle cx="352" cy="420" r="11" fill="#475569"/><text x="352" y="424" class="num" text-anchor="middle">8</text>
   </g>
 

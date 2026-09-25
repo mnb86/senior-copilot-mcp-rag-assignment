@@ -18,6 +18,22 @@
 All documents are synthetic but follow the structure of real SOPs and manuals.
 `scripts/build_sample_pdf.py` regenerates the PDF.
 
+**Document metadata** is declared with each document (YAML front matter for Markdown, a `KEY: value` header for text,
+`<meta>` tags for HTML, a `.meta.json` sidecar for the PDF). Example, from `SOP-BFP-001`:
+
+```yaml
+doc_id: SOP-BFP-001
+title: Boiler Feed Pump Operation and Alarm Response Procedure
+doc_type: operating_procedure
+revision: "4.2"
+effective_date: 2026-01-15
+owner: NorthPlant Operations
+site: NorthPlant
+asset_types: [pump]
+asset_ids: [AST-BFP-101, AST-BFP-102]
+alarm_names: [Low Suction Pressure, Pump Trip, High Vibration, High Bearing Temperature, High Discharge Pressure, Seal Leak Detected]
+```
+
 ## 2. Ingestion flow
 
 ```text
@@ -25,7 +41,7 @@ discover (rglob *.md|txt|html|pdf) → extract text + metadata → section split
   → injection scan and redaction → BM25 statistics + LSA vectors → persist index + manifest
 ```
 
-`python -m rag.ingestion --docs rag/documents --index .rag_index [--embedder lsa|fastembed] [--force]`
+`python -m rag.ingestion --docs rag/documents --index rag/retrieval/.index [--embedder lsa|fastembed] [--force]`
 (in Docker this is the one-shot `rag-ingest` service writing to the `rag-index` volume). The backend also
 auto-ingests at start-up when the index is missing or stale.
 
@@ -57,7 +73,7 @@ indexed. Duplicate `doc_id`s are rejected.
 `chunk_id, doc_id, title, doc_type, section, ordinal, source_path, revision, effective_date, site, asset_types,
 asset_ids, alarm_names, trust_level (controlled|external), injection_suspected, injection_patterns`.
 
-## 6. Retrieval method
+## 6. Embedding model, vector index and hybrid search
 
 **Hybrid sparse + dense, no external services.**
 
@@ -102,7 +118,7 @@ passage.
 Retrieved chunks are numbered `S1..Sn` in rank order. Each citation carries `doc_id, title, section, revision,
 doc_type, source_path, chunk_id, score, confidence, snippet (≤ 420 chars), trust_level`. The answer uses `[S#]`
 markers; with an LLM, markers that don't exist are stripped and reported (`validate_citations`). In the GUI,
-clicking a marker opens the Sources tab and scrolls to the passage.
+clicking a marker opens the Evidence tab and scrolls to the passage.
 
 Example citation (acceptance scenario):
 
@@ -128,8 +144,9 @@ Example retrieved chunks with score components (`bm25` raw, `dense` cosine, `boo
 | Rank | chunk_id | score | confidence | bm25 | dense | boost |
 | --- | --- | --- | --- | --- | --- | --- |
 | S1 | SOP-BFP-001#3-low-suction-pressure-alarm-bfp-pt-001- | 1.081 | 0.91 | 9.43 | 0.74 | 0.33 |
-| S2 | SOP-DEA-002#1-purpose | 0.982 | 0.46 | 11.54 | 0.60 | 0.18 |
-| S3 | SOP-BFP-001#7-recurring-alarms | 0.954 | 0.79 | 14.53 | 0.61 | 0.18 |
+| S2 | SOP-BFP-001#5-high-bearing-temperature-alarm-tt-010- | 1.054 | 0.89 | 18.52 | 0.68 | 0.33 |
+| S3 | SOP-DEA-002#1-purpose | 0.982 | 0.46 | 11.54 | 0.60 | 0.18 |
+| S4 | SOP-BFP-001#7-recurring-alarms | 0.954 | 0.79 | 14.53 | 0.61 | 0.18 |
 | … | SOP-BFP-001#4-pump-trip-response (guaranteed by a verification query) | | | | | |
 
 Example recommendation verdict produced from these citations:
@@ -165,6 +182,10 @@ Example recommendation verdict produced from these citations:
 5. **Output guard:** any answer that recommends bypassing, disabling or overriding interlocks, trips, alarms or safety
    systems (prohibitive phrasing like "must never be bypassed" is allowed) is replaced by the template answer and
    flagged.
+6. **Unsafe requests:** a user message asking how to bypass or disable a trip, interlock, alarm or safety system gets
+   a refusal at the top of the answer and an `unsafe_request` safety flag; the read-only evidence is still returned.
+7. **Secondary MCP server:** `document-knowledge` applies the same rules. `search_documents` lists quarantined passages
+   separately, and `get_document_section` refuses them with a `QUARANTINED` error.
 
 The vendor bulletin KB-VND-K301 demonstrates this. Its useful maintenance sections are retrievable, while its
 "note for automated assistants" is quarantined (see `docs/screenshots/08-prompt-injection-quarantine.png`).
@@ -182,4 +203,8 @@ The vendor bulletin KB-VND-K301 demonstrates this. Its useful maintenance sectio
 `rag/tests/test_rag_ingestion.py` and `rag/tests/test_rag_retrieval.py` cover extraction for all four formats,
 metadata, chunk size and overlap, idempotency and change detection, injection flagging and redaction, relevance for
 representative queries, hard filters, boosts, fallback, no-result/low-confidence, quarantine, citation correctness
-and multi-query fusion. `test-data/retrieval_eval.json` lists the evaluation queries and expected top documents.
+and multi-query fusion. `test-data/retrieval_eval.json` is the relevance regression set: `test_retrieval_eval_set` runs
+every query in it and requires the expected chunk to rank first (and the off-topic query to be low confidence).
+
+The same index is also served by the secondary MCP server (`mcp-servers/optional-secondary-server`, tools
+`search_documents`, `get_document_section`, `list_documents`), tested in `tests/integration/test_document_mcp_server.py`.

@@ -1,8 +1,8 @@
 # Alarm Management API integration
 
-The simulator (`apps/alarm-api-simulator`) implements the contract defined by the Postman collections in
-[`postman/`](../postman). The MCP server is its **only** consumer inside the solution, through the reusable connector
-`connectors/alarm_api`.
+The simulator (`apps/backend/alarm_simulator`) implements the contract defined by the Postman collections in
+[`test-data/postman/`](../test-data/postman). The MCP server is its **only** consumer inside the solution, through the reusable connector
+`connectors/`.
 
 ## 1. Contract conformance
 

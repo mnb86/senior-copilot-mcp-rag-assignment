@@ -19,16 +19,18 @@
    (MCP and API bearer tokens) are enforced. Tokens are static shared secrets (no OAuth / rotation).
 7. **Read-only scope.** No ticketing or write tools are implemented. The client policy blocks non-read-only tools
    without explicit confirmation, but there is no confirmation UI yet.
-8. **No `optional-secondary-server`.** Only the Alarm Management MCP server exists; documents are served by the
-   in-process retrieval service rather than a second MCP server.
+8. **Copilot RAG runs in-process.** The `document-knowledge` MCP server (`mcp-servers/optional-secondary-server`)
+   exposes the corpus to external MCP clients, but the copilot still calls the retrieval service in-process for its
+   RAG step (multi-query fusion needs the raw ranked chunks). Future work: route the RAG step through
+   `search_documents` so both sources appear in one MCP trace.
 9. **Synthetic data and documents.** Patterns (causal chains, conflicts, faults) are designed to exercise the
    workflow; they are not real plant data.
-10. **Frontend lockfile.** `package-lock.json` was not generated in the build environment (no registry access). CI
-    and Docker run `npm install` and the npm audit job generates the lockfile first; commit a lockfile for fully
-    reproducible frontend builds.
-11. **Coverage number.** The committed `docs/coverage-summary.md` comes from a stdlib tracer
-    (`scripts/coverage_lite.py`, counts executed lines of all code objects, about 95%); CI publishes the canonical
-    `pytest-cov` report, which may differ by a few points.
+10. **Loosely matched sources for undocumented equipment.** When the corpus has no document for an asset type
+    (e.g. Forced Draft Fan 301), retrieval cites the closest general procedures and confidence can still be "high"
+    because the MCP evidence is complete. A per-asset-type relevance check before citing would tighten this.
+11. **Coverage gaps.** Line coverage is 94% (`docs/coverage-summary.md`); the uncovered lines are mostly defensive
+    branches (unexpected upstream payloads, provider-specific LLM errors) that are hard to trigger without fault
+    injection in every dependency.
 12. **No streaming.** Answers are returned when the plan completes (typically 0.3–1.5 s offline).
 
 ## Future improvements
@@ -36,12 +38,14 @@
 - LLM-planned tool chains (validated against discovered schemas) with the deterministic plans as guard rails and
   fallback.
 - Server-sent progress events: stream wave-by-wave tool execution to the GUI.
-- Vector database (Qdrant/pgvector) + neural embeddings + cross-encoder reranking; an evaluation harness (recall@k,
-  MRR) over `test-data/retrieval_eval.json` in CI.
+- Vector database (Qdrant/pgvector) + neural embeddings + cross-encoder reranking; extend the relevance suite over
+  `test-data/retrieval_eval.json` (already run in CI) with recall@k / MRR metrics and more queries.
 - NLI-based consistency checking between recommendations and procedures.
-- Second MCP server for documents/ticketing, with write tools behind explicit, audited user confirmation.
+- A ticketing MCP server with write tools behind explicit, audited user confirmation (a confirmation UI in the chat
+  panel); route the copilot's RAG step through the existing `document-knowledge` MCP server.
 - OAuth2 / OIDC for users, per-tool authorization scopes on the MCP server, secret rotation via a vault.
 - OpenTelemetry traces and metrics (the `trace_id` propagation already matches the span model), dashboards for tool
   latency and error rates.
 - Redis conversation store, horizontal scaling of the stateless MCP server behind a load balancer.
-- Playwright GUI tests in CI (screenshots in `docs/screenshots` are already produced with Playwright).
+- Browser-driven GUI tests in CI (the screenshots in `docs/screenshots` are produced by `scripts/capture_screenshots.mjs`,
+  which drives headless Edge over the DevTools protocol).

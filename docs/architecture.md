@@ -8,7 +8,7 @@
 
 | Layer | Component | Location | Responsibility |
 | --- | --- | --- | --- |
-| UI | GUI | `apps/frontend` | Chat, alarm summary, causes, recommendation verdicts, citations, MCP trace, tool discovery. Talks only to the copilot API. |
+| UI | GUI | `apps/frontend` | React. Chat panel (conversation + message box) on the right; the selected answer's report in the middle (Overview: assessment, asset and KPIs, likely causes, action verdicts, alarms; Evidence: citations and quarantined passages; Execution trace: waves, JSON-RPC request/response, upstream API calls, retries; Tool catalog: live discovery); case history and saved scenarios on the left. Talks only to the copilot API. |
 | Copilot | API | `copilot/api.py` | HTTP surface, request validation and size limits, CORS, error envelopes, lifespan wiring. |
 | Copilot | Orchestrator | `copilot/orchestrator.py` | Runs one request end to end: intent → plan → MCP session → execution → reasoning → answer; context retention; structured request log. |
 | Copilot | Intent + entities | `copilot/intent.py` (+ `llm.refine_intent`) | Classifies into 7 intents and extracts asset, equipment type, site, unit, alarm terms, severity, status, window and context references. |
@@ -19,19 +19,21 @@
 | Copilot | MCP client | `copilot/mcp_client.py` | Streamable-HTTP `ClientSession`, discovery cache, client-side JSON-Schema validation, output-schema check, read-only policy, error parsing. |
 | Copilot | Retrieval service | `copilot/retrieval_service.py` | Loads the index (auto-ingest), multi-query fusion, guaranteed evidence for verification queries. |
 | Tools | MCP server | `mcp-servers/alarm-management/alarm_mcp` | 13 typed read-only tools, validation, error mapping, trace, bearer auth, allow-list, `/healthz`, HTTP + stdio. |
-| Tools | API connector | `connectors/alarm_api` | Auth, trace headers, timeout, retry/backoff, typed errors, pagination, attempt audit. Reusable outside MCP. |
-| Source | Alarm API simulator | `apps/alarm-api-simulator` | Postman-contract implementation, deterministic data, fault injection. |
+| Tools | Secondary MCP server | `mcp-servers/optional-secondary-server/document_mcp` | `document-knowledge`: 3 read-only tools over the RAG index (search with citations, section lookup, document list), quarantine refusal, bearer auth, `/healthz`, HTTP + stdio. |
+| Tools | API connector | `connectors/` | Auth, trace headers, timeout, retry/backoff, typed errors, pagination, attempt audit. Reusable outside MCP. |
+| Source | Alarm API simulator | `apps/backend/alarm_simulator` | Postman-contract implementation, deterministic data, fault injection. |
 | Knowledge | Ingestion | `rag/ingestion` | Discover → extract → chunk → injection scan and redaction → index; idempotent. |
 | Knowledge | Retrieval | `rag/retrieval` | BM25 + LSA hybrid, filters/boosts, fallback, quarantine, low-confidence. |
 | Knowledge | Document store / index | `rag/documents`, volume `rag-index` | Corpus and persisted index. |
-| Domain | Models | `copilot/domain.py`, `alarm_mcp/models.py`, `rag/models.py` | Typed contracts on every boundary (Pydantic). |
-| Config | Settings | `copilot/config.py`, `alarm_mcp/config.py` | Env-only configuration, `SecretStr` secrets. |
+| Domain | Models | `copilot/domain.py`, `alarm_mcp/models.py`, `rag/retrieval/models.py` | Typed contracts on every boundary (Pydantic). |
+| Config | Settings | `copilot/config.py`, `alarm_mcp/config.py`, `document_mcp/config.py` | Env-only configuration, `SecretStr` secrets. |
 | Observability | Logs + trace | every service | JSON log lines keyed by `trace_id`; the trace is also returned to the GUI. |
 
 **Authentication boundaries.** (1) Browser → copilot API: input validation and size limits (no user auth in this
 scope). (2) Copilot → MCP server: `Authorization: Bearer $MCP_SERVER_TOKEN`, checked with constant-time compare.
 (3) MCP server → Alarm API: `Authorization: Bearer $ALARM_API_TOKEN`, held only by the MCP server. The copilot never
-sees the API token and **cannot call the API directly** (it has no connector; only MCP).
+sees the API token and **cannot call the API directly** (it has no connector; only MCP). (4) MCP client →
+`document-knowledge` server: `Authorization: Bearer $DOCS_MCP_SERVER_TOKEN`; the server mounts the index read-only.
 
 ## 2. Request flow (acceptance scenario)
 
@@ -54,7 +56,7 @@ sees the API token and **cannot call the API directly** (it has no connector; on
 5. **Execution waves** (each call carries `_meta.trace_id / conversation_id / client_id / step_id`; arguments are
    validated client-side against the discovered `inputSchema`):
    - wave 1: `search_assets` → `AST-BFP-101`
-   - wave 2 (parallel): `get_asset_metadata`, `get_alarms` (3 pages), `summarize_alarms`, `get_alarm_trends`,
+   - wave 2 (parallel): `get_asset_metadata`, `get_alarms` (follows `pagination.has_next` across pages), `summarize_alarms`, `get_alarm_trends`,
      `correlate_alarms` (the simulator's transient 503 is retried inside the MCP server; `retries: 1` appears in the
      trace)
    - wave 3 (parallel): `score_alarm_priority`, `get_operator_recommendations` for the selected focus alarm
@@ -68,13 +70,14 @@ sees the API token and **cannot call the API directly** (it has no connector; on
    times) is corroborated by SOP-DEA-002 / SOP-BFP-001; recommendation check, where "restart immediately" conflicts
    with SOP-BFP-001 §4; citations S1..Sn.
 8. **Answer:** the template composer (or LLM) writes Markdown with `[S#]` markers and tool names; citations are
-   validated and the output guard blocks advice to bypass or disable protections. Confidence is high/medium/low
-   depending on MCP coverage, retrieval confidence and errors.
+   validated and the output guard blocks advice to bypass or disable protections; a *request* to bypass or disable one
+   is refused at the top of the answer (`unsafe_request` flag). Confidence is high/medium/low depending on MCP
+   coverage, retrieval confidence and errors.
 9. **Context** (asset, focus alarm, API recommendations) is stored for follow-ups like "Are the API recommendations
    consistent with the maintenance manual?".
 10. **Response** includes `answer`, `alarm_summary`, `likely_causes`, `recommendations`, `citations`, `retrieval`
     diagnostics, the full `tool_trace` (JSON-RPC request, response, upstream API attempts), `plan`, `warnings`,
-    `errors` and `timings`. The GUI renders all of them.
+    `errors` and `timings`. The GUI shows the answer in the chat panel and the rest in the report tabs.
 
 ## 3. Failure handling
 
@@ -89,6 +92,9 @@ sees the API token and **cannot call the API directly** (it has no connector; on
 | Low-confidence or no retrieval | retriever | explicit low-confidence disclaimer, no invented guidance |
 | Injected instructions in documents | ingestion flag + retrieval quarantine + prompt isolation + output guard | chunk excluded and listed in the GUI |
 | LLM failure / invalid JSON / unsafe output | llm module | deterministic template answer + warning |
+| User asks to bypass or disable a protection | orchestrator (same pattern as the output guard) | refusal at the top of the answer, `unsafe_request` safety flag, read-only evidence still shown |
+| How-to question with no asset, site or context | intent rules | answered from documents (no MCP calls) instead of asking for an asset |
+| "Investigate" with no asset, site or context | intent rules + planner | clarification: asks which asset to investigate |
 
 ## 4. Observability
 
@@ -96,15 +102,31 @@ Every service logs one JSON line per unit of work:
 
 - simulator: `http_request` (method, path, status, duration, trace_id, client_id, request_id)
 - connector: `alarm_api_call` (status, attempt, duration, trace_id)
-- MCP server: `mcp_tool_call` (server, tool, outcome, api_status, trace_id, conversation_id, duration)
-- copilot: `copilot_request` (request_id, conversation_id, trace_id, intent, confidence, generator, per-tool status/
-  duration/retries/api_status, retrieval query, doc ids, scores, timings including LLM latency)
+- MCP servers: `mcp_tool_call` (server, tool, outcome, api_status, trace_id, conversation_id, duration; the
+  document server adds doc ids and top confidence)
+- copilot: `copilot_request` (request_id, conversation_id, trace_id, intent, confidence, generator, per-tool
+  mcp_server/tool/status/duration/retries/api_status, retrieval query, doc ids, scores, `llm_latency_ms` (null in
+  offline mode), timings)
+
+Example (abridged: one tool entry shown, values from two runs of the acceptance scenario):
+
+```json
+{"event": "copilot_request", "request_id": "066a1ee3fdbd4b06", "conversation_id": "e074bb5a50af",
+ "trace_id": "trace-55fce18d11464ed6", "intent": "investigate", "confidence": "high", "generator": "template",
+ "tools": [{"mcp_server": "alarm-management", "tool": "correlate_alarms", "status": "ok", "duration_ms": 332.6,
+            "retries": 1, "api_status": 200}],
+ "retrieval": {"query": "Low Suction Pressure Boiler Feed Pump 101 pump alarm response procedure | ...",
+               "doc_ids": ["SOP-BFP-001#3-low-suction-pressure-alarm-bfp-pt-001-"], "scores": [1.0805]},
+ "llm_latency_ms": null, "timings": {"execution_ms": 335.6, "total_ms": 370.5}}
+```
 
 `trace_id` is created per chat request and propagated GUI response ← copilot → MCP `_meta` → API `trace_id` header, so
 one `grep trace-…` follows a request across all four services. Logs never contain tokens or full documents.
 
 ## 5. Deployment
 
-`docker compose up --build` builds one Python image (four roles by `command`) and an nginx image for the GUI.
-Health checks gate start-up: `alarm-api` → `alarm-mcp` → `rag-ingest` (completes) → `copilot-backend` → `frontend`.
-The index lives on the named volume `rag-index`; containers run as a non-root user.
+`docker compose up --build` builds one Python image (five roles by `command`: simulator, alarm MCP server, document
+MCP server, ingestion job, copilot backend) and an nginx image for the GUI. Health checks gate start-up:
+`alarm-api` → `alarm-mcp` → `copilot-backend` → `frontend`, and `rag-ingest` must complete before `copilot-backend` and
+`docs-mcp` start. The index lives on the named volume `rag-index` (read-only for `docs-mcp`); containers run as a
+non-root user. Without Docker, `python scripts/run_local.py` starts the same services.
